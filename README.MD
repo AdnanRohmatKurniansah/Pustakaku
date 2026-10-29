@@ -92,7 +92,7 @@ projek_web/
 │   ├── wishlist.php              
 │   ├── riwayat_pesanan.php       
 │   └── cetak_invoice.php         
-├── database/                     
+├── schema/                     
 │   └── pustakaku.sql             
 ├── index.php                     
 ├── katalog.php                   
