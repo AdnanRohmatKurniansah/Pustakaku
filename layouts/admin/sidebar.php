@@ -46,7 +46,7 @@
 
         <li class="nav-item">
             <a class="nav-link"
-               href="#">
+               href="admin/restok/index.php" data-menu="restok">
                 <i class="bi bi-archive"></i>
                 <span>Restok Buku</span>
             </a>
@@ -86,7 +86,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const menuPaths = {
             dashboard: '/admin/index.php',
             kategori: '/admin/kategori/index.php',
-            buku: '/admin/buku/index.php'
+            buku: '/admin/buku/index.php',
+            restok: '/admin/restok/index.php'
         };
 
         if (menuPaths[menu]) {
