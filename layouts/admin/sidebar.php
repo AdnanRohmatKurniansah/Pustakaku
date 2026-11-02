@@ -12,19 +12,19 @@
     <div class="px-3 pt-3 pb-2 text-uppercase fw-bold text-white" style="font-size: 0.72rem; opacity: 0.5; letter-spacing: 0.05rem;">Menu Utama</div>
     <ul class="nav flex-column mb-auto">
         <li class="nav-item">
-            <a class="nav-link <?= (strpos($current_uri, '/admin/index.php') !== false || substr($current_uri, -7) === '/admin/') ? 'active' : ''; ?>" href="/projek_web/admin/index.php">
+            <a class="nav-link <?= (strpos($current_uri, '/admin/index.php') !== false || substr($current_uri, -7) === '/admin/') ? 'active' : ''; ?>" href="/Pustakaku/admin/index.php">
                 <i class="bi bi-grid-1x2-fill"></i>
                 <span>Dashboard</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?= strpos($current_uri, '/admin/kategori') !== false ? 'active' : ''; ?>" href="/projek_web/admin/kategori/index.php">
+            <a class="nav-link <?= strpos($current_uri, '/admin/kategori') !== false ? 'active' : ''; ?>" href="/Pustakaku/admin/kategori/index.php">
                 <i class="bi bi-tags-fill"></i>
                 <span>Kategori Buku</span>
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?= strpos($current_uri, '/admin/buku') !== false ? 'active' : ''; ?>" href="/projek_web/admin/buku/index.php">
+            <a class="nav-link <?= strpos($current_uri, '/admin/buku') !== false ? 'active' : ''; ?>" href="/Pustakaku/admin/buku/index.php">
                 <i class="bi bi-journal-bookmark-fill"></i>
                 <span>Data Buku</span>
             </a>
