@@ -67,7 +67,7 @@
                             </div>
                             <div class="col-12 col-md-6">
                                 <label for="email" class="form-label small fw-semibold text-secondary">Email</label>
-                                <input type="text" class="form-control" disabled id="email" name="email" value="<?= htmlspecialchars($user['email']); ?>" required autofocus>
+                                <input type="email" class="form-control" disabled id="email" name="email" value="<?= htmlspecialchars($user['email']); ?>" required autofocus>
                             </div>
                             <div class="col-12 col-md-6">
                                 <label for="no_telepon" class="form-label small fw-semibold text-secondary">No Telepon </label>
