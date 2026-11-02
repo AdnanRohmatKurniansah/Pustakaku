@@ -24,7 +24,8 @@
                         $_SESSION['nama_lengkap'] = $user['nama_lengkap'];
                         $_SESSION['email'] = $user['email'];
                         $_SESSION['role'] = $user['role'];
-
+                        
+                        $_SESSION['success'] = "Akses Diterima, Anda Berhasil Login";
                         header("Location: ../admin/index.php");
                         exit;
                     } else {

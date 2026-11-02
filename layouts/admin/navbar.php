@@ -25,7 +25,10 @@
                             <div class="text-muted small"><?= htmlspecialchars($_SESSION['email']); ?></div>
                         </div>
                     </li>
-                    <li><a class="dropdown-item py-2 text-danger" href="/projek_web/auth/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a></li>
+                    <li>
+                        <a class="dropdown-item py-2" href="../admin/profile/index.php"><i class="bi bi-person-circle me-2"></i>Profile</a>
+                        <a class="dropdown-item py-2 text-danger" href="../admin/profile/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a>
+                    </li>
                 </ul>
             </div>
         </div>
