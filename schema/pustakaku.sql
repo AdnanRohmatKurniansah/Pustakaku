@@ -47,6 +47,7 @@ CREATE TABLE IF NOT EXISTS `buku` (
   `isbn` VARCHAR(30) NULL,
   `deskripsi` TEXT NULL,
   `harga` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  `harga_diskon` DECIMAL(12, 2) NULL DEFAULT NULL,
   `stok` INT NOT NULL DEFAULT 0,
   `berat_gram` INT NOT NULL DEFAULT 200,
   `gambar` VARCHAR(255) NOT NULL,

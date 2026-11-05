@@ -26,10 +26,15 @@
             <div class="col-12 col-sm-10 col-md-8 col-lg-5">
                 <div class="card card-login p-4 p-sm-5">
                     <div class="text-center mb-4">
-                        <div class="brand-icon mb-3">
-                            <i class="bi bi-book-half fs-4 rounded-3 bg-success p-2 text-white"></i>
-                        </div>
-                        <h4 class="fw-bold text-dark mb-1">PustakaKu Admin</h4>
+                        <a href="../index.php" class="brand-link mb-2">
+                            <span class="brand-icon">
+                                <i class="bi bi-book-half"></i>
+                            </span>
+                            <span class="brand-text">
+                                <span class="brand-name fs-4">Pustaka<span>Ku</span></span>
+                                <span class="brand-caption" style="font-size: 14px;">Buku & Alat Tulis</span>
+                            </span>
+                        </a>
                         <p class="text-muted small mb-0">Masuk ke panel kendali toko buku & ATK</p>
                     </div>
                     <?php if (!empty($error)): ?>

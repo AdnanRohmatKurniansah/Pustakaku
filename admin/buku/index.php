@@ -108,7 +108,13 @@
                                                 <div class="text-muted small"><?= htmlspecialchars($row['tahun_terbit'] ?? '-'); ?></div>
                                             </td>
                                             <td>
-                                                <span class="fw-semibold text-dark">Rp <?= number_format($row['harga'], 0, ',', '.'); ?></span>
+                                                <?php if (!empty($row['harga_diskon']) && $row['harga_diskon'] > 0 && $row['harga_diskon'] < $row['harga']): ?>
+                                                    <div class="fw-bold text-success">Rp <?= number_format($row['harga_diskon'], 0, ',', '.'); ?></div>
+                                                    <del class="text-muted small">Rp <?= number_format($row['harga'], 0, ',', '.'); ?></del>
+                                                    <span class="badge bg-danger ms-1" style="font-size: 0.65rem;">-<?= round((($row['harga'] - $row['harga_diskon']) / $row['harga']) * 100); ?>%</span>
+                                                <?php else: ?>
+                                                    <span class="fw-semibold text-dark">Rp <?= number_format($row['harga'], 0, ',', '.'); ?></span>
+                                                <?php endif; ?>
                                             </td>
                                             <td>
                                                 <?php if ($row['stok'] <= 5): ?>

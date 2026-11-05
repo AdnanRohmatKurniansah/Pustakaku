@@ -99,14 +99,17 @@
                                 <input type="number" class="form-control" id="berat_gram" name="berat_gram" value="250" min="1" required>
                             </div>
 
-                            <div class="col-12 col-md-6">
-                                <label for="harga" class="form-label small fw-semibold text-secondary">Harga Satuan (Rp) <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="number" class="form-control" id="harga" name="harga" placeholder="85000" min="0" required>
-                                </div>
+                            <div class="col-12 col-md-4">
+                                <label for="harga" class="form-label small fw-semibold text-secondary">Harga Normal (Rp) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" id="harga" name="harga" placeholder="85000" min="0" required>
                             </div>
 
-                            <div class="col-12 col-md-6">
+                            <div class="col-12 col-md-4">
+                                <label for="harga_diskon" class="form-label small fw-semibold text-secondary">Harga Diskon (Rp) <span class="text-muted">(Opsional)</span></label>
+                                <input type="number" class="form-control" id="harga_diskon" name="harga_diskon" placeholder="68000" min="0">
+                            </div>
+
+                            <div class="col-12 col-md-4">
                                 <label for="stok" class="form-label small fw-semibold text-secondary">Jumlah Stok <span class="text-danger">*</span></label>
                                 <input type="number" class="form-control" id="stok" name="stok" placeholder="50" min="0" required>
                             </div>

@@ -61,21 +61,14 @@ projek_web/
 │   ├── css/
 │   │   ├── style.css                      
 │   ├── js/
-│   │   ├── main.js               
-│   │   └── cart.js               
-│   └── uploads/                  
-│       ├── produk/              
-│       ├── bukti_bayar/         
-│       └── profil/               
+│   │   ├── main.js                          
+│   └── uploads/                             
 ├── config/                       
-│   ├── database.php             
-│   └── session.php               
-├── includes/                     
-│   ├── header.php                
+│   ├── database.php                      
+├── layouts/                     
+│   ├── admin/                
 │   ├── footer.php               
 │   ├── navbar.php                
-│   ├── sidebar_admin.php        
-│   └── alerts.php                
 ├── auth/                         
 │   ├── login.php
 │   ├── register.php
@@ -88,10 +81,6 @@ projek_web/
 │   ├── pesanan/                  
 │   └── laporan/                  
 ├── customer/                     
-│   ├── profil.php                
-│   ├── wishlist.php              
-│   ├── riwayat_pesanan.php       
-│   └── cetak_invoice.php         
 ├── schema/                     
 │   └── pustakaku.sql             
 ├── index.php                     
