@@ -17,6 +17,7 @@
         $tahun_terbit = !empty($_POST['tahun_terbit']) ? intval($_POST['tahun_terbit']) : 'NULL';
         $isbn = trim($_POST['isbn'] ?? '');
         $harga = isset($_POST['harga']) ? floatval($_POST['harga']) : 0;
+        $harga_diskon = (!empty($_POST['harga_diskon']) && floatval($_POST['harga_diskon']) > 0) ? floatval($_POST['harga_diskon']) : 'NULL';
         $stok = isset($_POST['stok']) ? intval($_POST['stok']) : 0;
         $berat_gram = isset($_POST['berat_gram']) ? intval($_POST['berat_gram']) : 200;
         $deskripsi = trim($_POST['deskripsi'] ?? '');
@@ -69,7 +70,7 @@
         $deskripsi = mysqli_real_escape_string($conn, $deskripsi);
         $gambar_nama = mysqli_real_escape_string($conn, $gambar_nama);
 
-        $query_str = "UPDATE buku SET kategori_id = '$kategori_id', judul = '$judul', penulis = '$penulis', penerbit = '$penerbit', tahun_terbit = $tahun_terbit, isbn = '$isbn', harga = '$harga', stok = '$stok', berat_gram = '$berat_gram', deskripsi = '$deskripsi', gambar = '$gambar_nama' WHERE id = '$id'";
+        $query_str = "UPDATE buku SET kategori_id = '$kategori_id', judul = '$judul', penulis = '$penulis', penerbit = '$penerbit', tahun_terbit = $tahun_terbit, isbn = '$isbn', harga = '$harga', harga_diskon = $harga_diskon, stok = '$stok', berat_gram = '$berat_gram', deskripsi = '$deskripsi', gambar = '$gambar_nama' WHERE id = '$id'";
         $update = mysqli_query($conn, $query_str);
 
         if ($update) {

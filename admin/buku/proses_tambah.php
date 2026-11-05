@@ -16,6 +16,7 @@
         $tahun_terbit = !empty($_POST['tahun_terbit']) ? intval($_POST['tahun_terbit']) : 'NULL';
         $isbn = trim($_POST['isbn'] ?? '');
         $harga = isset($_POST['harga']) ? floatval($_POST['harga']) : 0;
+        $harga_diskon = (!empty($_POST['harga_diskon']) && floatval($_POST['harga_diskon']) > 0) ? floatval($_POST['harga_diskon']) : 'NULL';
         $stok = isset($_POST['stok']) ? intval($_POST['stok']) : 0;
         $berat_gram = isset($_POST['berat_gram']) ? intval($_POST['berat_gram']) : 200;
         $deskripsi = trim($_POST['deskripsi'] ?? '');
@@ -62,7 +63,7 @@
         $deskripsi = mysqli_real_escape_string($conn, $deskripsi);
         $gambar_nama = mysqli_real_escape_string($conn, $gambar_nama);
 
-        $query_str = "INSERT INTO buku (kategori_id, judul, penulis, penerbit, tahun_terbit, isbn, harga, stok, berat_gram, deskripsi, gambar) VALUES ('$kategori_id', '$judul', '$penulis', '$penerbit', $tahun_terbit, '$isbn', '$harga', '$stok', '$berat_gram', '$deskripsi', '$gambar_nama')";
+        $query_str = "INSERT INTO buku (kategori_id, judul, penulis, penerbit, tahun_terbit, isbn, harga, harga_diskon, stok, berat_gram, deskripsi, gambar) VALUES ('$kategori_id', '$judul', '$penulis', '$penerbit', $tahun_terbit, '$isbn', '$harga', $harga_diskon, '$stok', '$berat_gram', '$deskripsi', '$gambar_nama')";
         $insert = mysqli_query($conn, $query_str);
 
         if ($insert) {
