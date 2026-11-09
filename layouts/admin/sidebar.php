@@ -38,7 +38,7 @@
 
         <li class="nav-item">
             <a class="nav-link"
-               href="#">
+               href="admin/supplier/index.php" data-menu="supplier">
                 <i class="bi bi-truck"></i>
                 <span>Supplier & Penerbit</span>
             </a>
@@ -87,7 +87,8 @@ document.addEventListener('DOMContentLoaded', function () {
             dashboard: '/admin/index.php',
             kategori: '/admin/kategori/index.php',
             buku: '/admin/buku/index.php',
-            restok: '/admin/restok/index.php'
+            restok: '/admin/restok/index.php',
+            supplier: '/admin/supplier/index.php'
         };
 
         if (menuPaths[menu]) {
