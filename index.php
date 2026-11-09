@@ -322,7 +322,7 @@
                                             <div class="progress-bar bg-danger" role="progressbar" style="width: <?= min(100, $fs['stok'] * 1.5); ?>%;"></div>
                                         </div>
 
-                                        <button class="btn btn-success btn-sm w-100 rounded-pill fw-semibold py-2 d-flex align-items-center justify-content-center gap-1 shadow-sm" onclick="tambahKeKeranjang('<?= addslashes($fs['judul']); ?>', <?= $fs['harga']; ?>)"><i class="bi bi-bag-plus"></i><span> Tambah Keranjang</span></button>
+                                        <button class="btn btn-success btn-sm w-100 rounded-pill fw-semibold py-2 d-flex align-items-center justify-content-center gap-1 shadow-sm" onclick="tambahKeKeranjang(<?= (int)$fs['id']; ?>, this)"><i class="bi bi-bag-plus"></i><span> Tambah Keranjang</span></button>
                                     </div>
                                 </div>
                             </div>
@@ -340,16 +340,19 @@
                 </div>
 
                 <div class="d-flex gap-1 overflow-x-auto no-scrollbar">
-                    <button class="btn btn-success btn-sm rounded-pill px-3 fw-semibold filter-tab-btn" data-filter="all">Semua</button>
-                    <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 filter-tab-btn" data-filter="Fiksi">Fiksi</button>
-                    <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 filter-tab-btn" data-filter="Non-Fiksi">Non-Fiksi</button>
-                    <button class="btn btn-outline-secondary btn-sm rounded-pill px-3 text-nowrap filter-tab-btn" data-filter="Pengembangan">Pengembangan Diri</button>
+                    <a href="index.php" class="subnav-link<?= nav_aktif($halaman_ini === 'index.php' && !$kat_dipilih && !$promo_aktif); ?>">Semua</a>
+                    <a href="index.php?kategori=1" class="subnav-link<?= nav_aktif($kat_dipilih === [1]); ?>">Buku Fiksi</a>
+                    <a href="index.php?kategori=2" class="subnav-link<?= nav_aktif($kat_dipilih === [2]); ?>">Buku Non-Fiksi</a>
+                    <a href="index.php?kategori=4" class="subnav-link<?= nav_aktif($kat_dipilih === [4]); ?>">Buku Pelajaran</a>
+                    <a href="index.php?kategori=5" class="subnav-link<?= nav_aktif($kat_dipilih === [5]); ?>">Buku Anak</a>
+                    <a href="index.php?kategori=3" class="subnav-link<?= nav_aktif($kat_dipilih === [3]); ?>">Pengembangan Diri</a>
+                    <a href="index.php?kategori=6" class="subnav-link<?= nav_aktif($kat_dipilih === [6]); ?>">Alat Tulis & ATK</a>
                 </div>
             </div>
 
             <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 g-md-4" id="bestSellerGrid">
                 <?php foreach ($buku_baru as $b): ?>
-                    <div class="col bestseller-item" data-category="<?= $b['category']; ?>">
+                    <div class="col bestseller-item" data-category="<?= $b['kategori']; ?>">
                         <div class="product-card">
                             <div class="product-img-box">
                                 <span class="rank-badge bg-success text-white shadow-sm"><i class="bi bi-stars me-1"></i>Baru</span>
@@ -371,7 +374,7 @@
                                             <div class="fw-bold text-dark fs-6"><?= formatRupiah($b['harga']); ?></div>
                                         <?php endif; ?>
                                     </div>
-                                    <button class="btn btn-outline-success btn-sm rounded-circle d-flex align-items-center justify-content-center p-2" style="width: 36px; height: 36px;" title="Tambah ke Keranjang" onclick="tambahKeKeranjang('<?= addslashes($b['judul']); ?>', <?= !empty($b['harga_diskon']) ? $b['harga_diskon'] : $b['harga']; ?>)"><i class="bi bi-bag-plus fs-6"></i></button>
+                                    <button class="btn btn-outline-success btn-sm rounded-circle d-flex align-items-center justify-content-center p-2" style="width: 36px; height: 36px;" title="Tambah ke Keranjang" onclick="tambahKeKeranjang(<?= (int)$b['id']; ?>, this)"><i class="bi bi-bag-plus fs-6"></i></button>
                                 </div>
                             </div>
                         </div>

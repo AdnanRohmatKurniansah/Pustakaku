@@ -1,10 +1,16 @@
 <?php
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
-    }
-
-    $cart_count = 2;
-    $cart_total = 65400;
+    }   
+    $halaman_ini = basename($_SERVER['PHP_SELF']);
+    $kat_dipilih = array_map('intval', (array)($_GET['kategori'] ?? []));
+    $promo_aktif = ($_GET['promo'] ?? '') === '1';
+    
+    require_once __DIR__ . '/../cart/proses_keranjang.php';
+    $cart_count = isset($conn) ? cart_count($conn) : 0;
+    if (!function_exists('nav_aktif')) {
+    function nav_aktif(bool $kondisi): string { return $kondisi ? ' active' : ''; }
+}
 ?>
 
 <div class="announcement-bar bg-success text-white py-2">
@@ -32,7 +38,7 @@
             </form>
 
             <div class="header-actions">
-                <a href="#keranjang" class="cart-icon-button" title="Keranjang Belanja" aria-label="Keranjang belanja">
+                <a href="keranjang.php" class="cart-icon-button" title="Keranjang Belanja" aria-label="Keranjang belanja">
                     <i class="bi bi-bag-check"></i>
                     <?php if ($cart_count > 0): ?>
                         <span class="cart-count"><?= (int) $cart_count; ?></span>
@@ -77,21 +83,22 @@
     <nav class="border-top">
         <div class="container">
             <div class="header-nav">
-                <a href="index.php" class="subnav-link active">Beranda</a>
-                <a href="#katalog" class="subnav-link">Semua Produk</a>
-                <a href="#terlaris" class="subnav-link" data-filter="Fiksi">Buku Fiksi</a>
-                <a href="#terlaris" class="subnav-link" data-filter="Non-Fiksi">Buku Non-Fiksi</a>
-                <a href="#kategori" class="subnav-link">Buku Pelajaran</a>
-                <a href="#kategori" class="subnav-link">Buku Anak</a>
-                <a href="#terlaris" class="subnav-link" data-filter="Pengembangan">Pengembangan Diri</a>
-                <a href="#atk" class="subnav-link">Alat Tulis & ATK</a>
-                <a href="#flash-sale" class="subnav-link">Pre-Order</a>
+                <a href="index.php" class="subnav-link<?= nav_aktif($halaman_ini === 'index.php'); ?>">Beranda</a>
+                <a href="katalog.php" class="subnav-link<?= nav_aktif($halaman_ini === 'katalog.php' && !$kat_dipilih && !$promo_aktif); ?>">Semua Produk</a>
+                <a href="katalog.php?kategori=1" class="subnav-link<?= nav_aktif($kat_dipilih === [1]); ?>">Buku Fiksi</a>
+                <a href="katalog.php?kategori=2" class="subnav-link<?= nav_aktif($kat_dipilih === [2]); ?>">Buku Non-Fiksi</a>
+                <a href="katalog.php?kategori=3" class="subnav-link<?= nav_aktif($kat_dipilih === [3]); ?>">Buku Pelajaran</a>
+                <a href="katalog.php?kategori=4" class="subnav-link<?= nav_aktif($kat_dipilih === [4]); ?>">Buku Anak</a>
+                <a href="katalog.php?kategori=5" class="subnav-link<?= nav_aktif($kat_dipilih === [5]); ?>">Pengembangan Diri</a>
+                <a href="katalog.php?kategori=6" class="subnav-link<?= nav_aktif($kat_dipilih === [6]); ?>">Alat Tulis & ATK</a>
+                <a href="katalog.php?promo=1" class="subnav-link<?= nav_aktif($promo_aktif); ?>">Promo & Diskon</a>
             </div>
         </div>
     </nav>
 </header>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/cart.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const btn = document.getElementById('accountDropdownBtn');
