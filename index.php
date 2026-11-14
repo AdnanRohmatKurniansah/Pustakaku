@@ -2,10 +2,6 @@
     session_start();
     require_once __DIR__ . '/config/database.php';
 
-    function formatRupiah($angka) {
-        return 'Rp ' . number_format($angka, 0, ',', '.');
-    }
-
     $kategori_filters = [
         1 => 'Fiksi',
         2 => 'Non-Fiksi',
@@ -114,7 +110,7 @@
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-5 text-center hero-book-wrap">
-                                        <div class="hero-book-frame"><img src="assets/uploads/buku/laut_bercerita.jpg" alt="Laut Bercerita" class="hero-book-img img-fluid"></div>
+                                        <div class="hero-book-frame"><img src="assets/images/banner/laut_bercerita.jpg" alt="Laut Bercerita" class="hero-book-img img-fluid"></div>
                                     </div>
                                 </div>
                             </div>
@@ -133,7 +129,7 @@
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-5 text-center hero-book-wrap">
-                                        <div class="hero-book-frame"><img src="assets/uploads/buku/atomic_habits.jpg" alt="Atomic Habits" class="hero-book-img img-fluid"></div>
+                                        <div class="hero-book-frame"><img src="assets/images/banner/atomic_habits.jpg" alt="Atomic Habits" class="hero-book-img img-fluid"></div>
                                     </div>
                                 </div>
                             </div>
@@ -152,7 +148,7 @@
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-5 text-center hero-book-wrap">
-                                        <div class="hero-book-frame"><img src="assets/uploads/buku/filosofi_teras.jpg" alt="Filosofi Teras" class="hero-book-img img-fluid"></div>
+                                        <div class="hero-book-frame"><img src="assets/images/banner/filosofi_teras.jpg" alt="Filosofi Teras" class="hero-book-img img-fluid"></div>
                                     </div>
                                 </div>
                             </div>
@@ -176,7 +172,6 @@
                         <div>
                             <div class="d-flex align-items-center justify-content-between mb-2">
                                 <span class="badge bg-danger-subtle text-danger fw-bold text-uppercase px-2 py-1" style="font-size: 0.7rem;">Promosi Spesial</span>
-                                <i class="bi bi-heart text-muted fs-6" style="cursor: pointer;" title="Favorit"></i>
                             </div>
                             <h5 class="fw-bold text-dark mb-1">Paket Mahasiswa Hemat</h5>
                             <p class="text-muted small mb-3">Diskon 25% untuk buku kuliah akademik & perlengkapan ATK harian.</p>
@@ -300,12 +295,16 @@
                             <div class="product-card">
                                 <div class="product-img-box">
                                     <span class="badge bg-danger badge-discount shadow-sm"><?= $fs['diskon']; ?></span>
-                                    <img src="<?= $fs['gambar']; ?>" alt="<?= htmlspecialchars($fs['judul']); ?>" loading="lazy">
+                                    <a href="detail_buku.php?id=<?= (int)$fs['id']; ?>" class="d-block text-center">
+                                        <img src="<?= $fs['gambar']; ?>" alt="<?= htmlspecialchars($fs['judul']); ?>" loading="lazy">
+                                    </a>
                                 </div>
 
                                 <div class="p-3 d-flex flex-column flex-grow-1">
                                     <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.68rem;"><?= htmlspecialchars($fs['kategori']); ?></span>
-                                    <h6 class="product-title" title="<?= htmlspecialchars($fs['judul']); ?>"><?= htmlspecialchars($fs['judul']); ?></h6>
+                                    <a href="detail_buku.php?id=<?= (int)$fs['id']; ?>" class="text-decoration-none text-dark">
+                                        <h6 class="product-title" title="<?= htmlspecialchars($fs['judul']); ?>"><?= htmlspecialchars($fs['judul']); ?></h6>
+                                    </a>
                                     <p class="product-author"><?= htmlspecialchars($fs['penulis']); ?></p>
                                     
                                     <div class="mb-2">
@@ -322,7 +321,9 @@
                                             <div class="progress-bar bg-danger" role="progressbar" style="width: <?= min(100, $fs['stok'] * 1.5); ?>%;"></div>
                                         </div>
 
-                                        <button class="btn btn-success btn-sm w-100 rounded-pill fw-semibold py-2 d-flex align-items-center justify-content-center gap-1 shadow-sm" onclick="tambahKeKeranjang(<?= (int)$fs['id']; ?>, this)"><i class="bi bi-bag-plus"></i><span> Tambah Keranjang</span></button>
+                                        <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
+                                            <button class="btn btn-success btn-sm w-100 rounded-pill fw-semibold py-2 d-flex align-items-center justify-content-center gap-1 shadow-sm" onclick="tambahKeKeranjang(<?= (int)$fs['id']; ?>, this)"><i class="bi bi-bag-plus"></i><span> Tambah Keranjang</span></button>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
@@ -356,13 +357,16 @@
                         <div class="product-card">
                             <div class="product-img-box">
                                 <span class="rank-badge bg-success text-white shadow-sm"><i class="bi bi-stars me-1"></i>Baru</span>
-
-                                <img src="<?= $b['gambar']; ?>" alt="<?= htmlspecialchars($b['judul']); ?>" loading="lazy">
+                                <a href="detail_buku.php?id=<?= (int)$b['id']; ?>" class="d-block text-center">
+                                    <img src="<?= $b['gambar']; ?>" alt="<?= htmlspecialchars($b['judul']); ?>" loading="lazy">
+                                </a>
                             </div>
 
                             <div class="p-3 d-flex flex-column flex-grow-1">
                                 <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.68rem;"><?= htmlspecialchars($b['kategori']); ?></span>
-                                <h6 class="product-title" title="<?= htmlspecialchars($b['judul']); ?>"><?= htmlspecialchars($b['judul']); ?></h6>
+                                <a href="detail_buku.php?id=<?= (int)$b['id']; ?>" class="text-decoration-none text-dark">
+                                    <h6 class="product-title" title="<?= htmlspecialchars($b['judul']); ?>"><?= htmlspecialchars($b['judul']); ?></h6>
+                                </a>
                                 <p class="product-author"><?= htmlspecialchars($b['penulis']); ?></p>
 
                                 <div class="mt-auto d-flex align-items-center justify-content-between pt-2 border-top">
@@ -374,7 +378,9 @@
                                             <div class="fw-bold text-dark fs-6"><?= formatRupiah($b['harga']); ?></div>
                                         <?php endif; ?>
                                     </div>
-                                    <button class="btn btn-outline-success btn-sm rounded-circle d-flex align-items-center justify-content-center p-2" style="width: 36px; height: 36px;" title="Tambah ke Keranjang" onclick="tambahKeKeranjang(<?= (int)$b['id']; ?>, this)"><i class="bi bi-bag-plus fs-6"></i></button>
+                                    <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
+                                        <button class="btn btn-outline-success btn-sm rounded-circle d-flex align-items-center justify-content-center p-2" style="width: 36px; height: 36px;" title="Tambah ke Keranjang" onclick="tambahKeKeranjang(<?= (int)$b['id']; ?>, this)"><i class="bi bi-bag-plus fs-6"></i></button>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

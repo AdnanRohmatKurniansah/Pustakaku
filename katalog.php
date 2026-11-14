@@ -2,25 +2,9 @@
     session_start();
     require_once __DIR__ . '/config/database.php';
 
-    function formatRupiah($angka) {
-        return 'Rp ' . number_format($angka, 0, ',', '.');
-    }
-
-    function h($s) {
-        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
-    }
-
     function katalog_url(array $params): string {
         $params = array_filter($params, fn($v) => $v !== '' && $v !== null && $v !== []);
         return 'katalog.php' . ($params ? '?' . http_build_query($params) : '');
-    }
-
-    function run_query($conn, string $sql, string $types = '', array $params = []) {
-        $stmt = mysqli_prepare($conn, $sql);
-        if (!$stmt) return false;
-        if ($types !== '') mysqli_stmt_bind_param($stmt, $types, ...$params);
-        if (!mysqli_stmt_execute($stmt)) return false;
-        return mysqli_stmt_get_result($stmt);
     }
 
     $per_page = 12;
@@ -53,24 +37,23 @@
 
 
     $price_expr = "COALESCE(NULLIF(b.harga_diskon, 0), b.harga)";
-    $where = []; $types = ''; $params = [];
+    $where = [];
 
     if ($q !== '') {
-        $where[] = "(b.judul LIKE ? OR b.penulis LIKE ?)";
-        $like = '%' . $q . '%';
-        $types .= 'ss'; $params[] = $like; $params[] = $like;
+        $q_esc = mysqli_real_escape_string($conn, $q);
+        $where[] = "(b.judul LIKE '%$q_esc%' OR b.penulis LIKE '%$q_esc%' OR b.penerbit LIKE '%$q_esc%' OR k.nama_kategori LIKE '%$q_esc%')";
     }
     if ($sel_kat) {
         $where[] = "b.kategori_id IN (" . implode(',', $sel_kat) . ")";
     }
-    if ($min !== null) { $where[] = "$price_expr >= ?"; $types .= 'd'; $params[] = $min; }
-    if ($max !== null) { $where[] = "$price_expr <= ?"; $types .= 'd'; $params[] = $max; }
+    if ($min !== null) { $where[] = "$price_expr >= $min"; }
+    if ($max !== null) { $where[] = "$price_expr <= $max"; }
     if ($f_stok)  $where[] = "b.stok > 0";
     if ($f_promo) $where[] = "b.harga_diskon IS NOT NULL AND b.harga_diskon > 0 AND b.harga_diskon < b.harga";
     $where_sql = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
     $total = 0;
-    $cnt_res = run_query($conn, "SELECT COUNT(*) AS total FROM buku b JOIN kategori k ON b.kategori_id = k.id $where_sql", $types, $params);
+    $cnt_res = mysqli_query($conn, "SELECT COUNT(*) AS total FROM buku b JOIN kategori k ON b.kategori_id = k.id $where_sql");
     if ($cnt_res) $total = (int)mysqli_fetch_assoc($cnt_res)['total'];
 
     $total_pages = max(1, (int)ceil($total / $per_page));
@@ -84,7 +67,7 @@
             FROM buku b JOIN kategori k ON b.kategori_id = k.id
             $where_sql ORDER BY $order_sql LIMIT $per_page OFFSET $offset";
     $produk = [];
-    $res = run_query($conn, $sql, $types, $params);
+    $res = mysqli_query($conn, $sql);
     if ($res) {
         while ($row = mysqli_fetch_assoc($res)) {
             $harga = (float)$row['harga'];
@@ -141,7 +124,7 @@
 
     <main class="container my-3 my-md-4">
 
-        <!-- Header katalog -->
+        
         <section class="bg-success-subtle border border-success-subtle rounded-4 p-3 p-md-4 mb-3 mb-lg-4">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb small mb-2">
@@ -151,7 +134,6 @@
             </nav>
             <div class="d-flex flex-column flex-md-row align-items-md-end justify-content-between gap-3">
                 <div>
-                    <span class="text-success fw-bold text-uppercase small tracking-wide" style="font-size: 0.75rem;">Katalog Lengkap</span>
                     <h2 class="fw-bold text-dark mb-1">Katalog Buku & Alat Tulis PustakaKu</h2>
                     <p class="text-muted small mb-0">Telusuri koleksi buku sastra, non-fiksi, pengembangan diri, hingga perlengkapan alat tulis pilihan yang dikurasi untuk kenyamanan membaca dan berkarya Anda.</p>
                 </div>
@@ -162,7 +144,7 @@
         </section>
 
         <div class="row g-3 g-lg-4">
-            <!-- ================= SIDEBAR FILTER ================= -->
+            
             <aside class="col-12 col-lg-3">
                 <button class="btn btn-outline-success rounded-pill w-100 d-lg-none mb-3 fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#filterPanel" aria-expanded="false" aria-controls="filterPanel">
                     <i class="bi bi-sliders2 me-1"></i> Tampilkan Filter
@@ -170,8 +152,8 @@
 
                 <div class="collapse d-lg-block" id="filterPanel">
                     <form method="GET" action="katalog.php" id="filterForm" class="filter-card bg-white border shadow-sm p-3 p-md-4">
-                        <input type="hidden" name="q" value="<?= h($q); ?>">
-                        <input type="hidden" name="sort" value="<?= h($sort); ?>">
+                        <input type="hidden" name="q" value="<?= htmlspecialchars($q); ?>">
+                        <input type="hidden" name="sort" value="<?= htmlspecialchars($sort); ?>">
 
                         <div class="d-flex align-items-center justify-content-between">
                             <h6 class="fw-bold text-dark mb-0"><i class="bi bi-sliders2 text-success me-1"></i> Filter Pencarian</h6>
@@ -183,7 +165,7 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" name="kategori[]" value="<?= $kid; ?>" id="kat<?= $kid; ?>" <?= in_array($kid, $sel_kat) ? 'checked' : ''; ?> onchange="this.form.submit()">
                                 <label class="form-check-label" for="kat<?= $kid; ?>">
-                                    <span><?= h($kat['nama']); ?></span>
+                                    <span><?= htmlspecialchars($kat['nama']); ?></span>
                                     <span class="count-pill"><?= $kat['jumlah']; ?></span>
                                 </label>
                             </div>
@@ -204,7 +186,7 @@
                                 foreach ($quick as $qp):
                                     $p = $base; $p['min'] = $qp[1]; $p['max'] = $qp[2];
                             ?>
-                                <a href="<?= h(katalog_url($p)); ?>" class="quick-price"><?= $qp[0]; ?></a>
+                                <a href="<?= htmlspecialchars(katalog_url($p)); ?>" class="quick-price"><?= $qp[0]; ?></a>
                             <?php endforeach; ?>
                         </div>
                         <button type="submit" class="btn btn-success btn-sm w-100 rounded-pill fw-semibold">Terapkan Harga</button>
@@ -229,7 +211,7 @@
                 </div>
             </aside>
 
-            <!-- ================= DAFTAR PRODUK ================= -->
+            
             <section class="col-12 col-lg-9" id="katalog">
                 <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2 mb-3">
                     <div class="small text-muted">
@@ -249,7 +231,7 @@
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
                         <span class="small text-muted"><i class="bi bi-funnel me-1"></i>Filter aktif:</span>
                         <?php foreach ($chips as $c): ?>
-                            <a href="<?= h($c['url']); ?>" class="chip-filter" title="Hapus filter"><?= h($c['label']); ?> <i class="bi bi-x-circle-fill"></i></a>
+                            <a href="<?= htmlspecialchars($c['url']); ?>" class="chip-filter" title="Hapus filter"><?= htmlspecialchars($c['label']); ?> <i class="bi bi-x-circle-fill"></i></a>
                         <?php endforeach; ?>
                         <a href="katalog.php" class="small text-danger fw-semibold text-decoration-none ms-1">Hapus semua</a>
                     </div>
@@ -272,17 +254,20 @@
                                         <?php if ($b['diskon']): ?>
                                             <span class="badge bg-danger badge-discount shadow-sm">-<?= $b['persen']; ?>%</span>
                                         <?php endif; ?>
-                                        <button type="button" class="btn-wishlist" title="Favorit" aria-label="Tambah ke favorit"><i class="bi bi-heart"></i></button>
-                                        <img src="<?= h($b['gambar']); ?>" alt="<?= h($b['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/200x260/eaf6ef/198754?text=Buku';">
+                                        <a href="detail_buku.php?id=<?= (int)$b['id']; ?>" class="d-block text-center">
+                                            <img src="<?= htmlspecialchars($b['gambar']); ?>" alt="<?= htmlspecialchars($b['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/200x260/eaf6ef/198754?text=Buku';">
+                                        </a>
                                         <span class="stock-tag <?= ($habis || $tipis) ? 'low' : ''; ?>">
                                             <?= $habis ? 'Stok Habis' : ($tipis ? 'Sisa ' . $b['stok'] : 'Stok Tersedia'); ?>
                                         </span>
                                     </div>
 
                                     <div class="p-3 d-flex flex-column flex-grow-1">
-                                        <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.68rem;"><?= h($b['kategori']); ?></span>
-                                        <h6 class="product-title" title="<?= h($b['judul']); ?>"><?= h($b['judul']); ?></h6>
-                                        <p class="product-author"><?= h($b['penulis']); ?></p>
+                                        <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.68rem;"><?= htmlspecialchars($b['kategori']); ?></span>
+                                        <a href="detail_buku.php?id=<?= (int)$b['id']; ?>" class="text-decoration-none text-dark">
+                                            <h6 class="product-title" title="<?= htmlspecialchars($b['judul']); ?>"><?= htmlspecialchars($b['judul']); ?></h6>
+                                        </a>
+                                        <p class="product-author"><?= htmlspecialchars($b['penulis']); ?></p>
 
                                         <div class="mt-auto d-flex align-items-center justify-content-between pt-2 border-top">
                                             <div>
@@ -293,12 +278,11 @@
                                                     <div class="fw-bold text-dark fs-6"><?= formatRupiah($b['harga']); ?></div>
                                                 <?php endif; ?>
                                             </div>
-                                            <button class="btn btn-outline-success btn-sm rounded-circle d-flex align-items-center justify-content-center p-2"
-                                                    style="width: 36px; height: 36px;" title="<?= $habis ? 'Stok habis' : 'Tambah ke Keranjang'; ?>"
-                                                    <?= $habis ? 'disabled' : ''; ?>
-                                                    onclick="tambahKeKeranjang(<?= (int)$b['id']; ?>, this)">
-                                                <i class="bi bi-bag-plus fs-6"></i>
-                                            </button>
+                                            <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
+                                                <button class="btn btn-outline-success btn-sm rounded-circle d-flex align-items-center justify-content-center p-2" style="width: 36px; height: 36px;" title="<?= $habis ? 'Stok habis' : 'Tambah ke Keranjang'; ?>" <?= $habis ? 'disabled' : ''; ?> onclick="tambahKeKeranjang(<?= (int)$b['id']; ?>, this)">
+                                                    <i class="bi bi-bag-plus fs-6"></i>
+                                                </button>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
@@ -306,7 +290,7 @@
                         <?php endforeach; ?>
                     </div>
 
-                    <!-- Pagination -->
+                    
                     <?php if ($total_pages > 1): ?>
                         <?php
                             $pg = fn($n) => katalog_url(array_merge($base, ['page' => $n > 1 ? $n : '']));
@@ -318,17 +302,17 @@
                             <nav aria-label="Navigasi halaman">
                                 <ul class="pagination mb-0">
                                     <li class="page-item <?= $page <= 1 ? 'disabled' : ''; ?>">
-                                        <a class="page-link" href="<?= h($pg($page - 1)); ?>#katalog"><i class="bi bi-chevron-left me-1"></i><span class="d-none d-sm-inline">Sebelumnya</span></a>
+                                        <a class="page-link" href="<?= htmlspecialchars($pg($page - 1)); ?>#katalog"><i class="bi bi-chevron-left me-1"></i><span class="d-none d-sm-inline">Sebelumnya</span></a>
                                     </li>
                                     <?php $prev = 0; foreach ($pages as $n): ?>
                                         <?php if ($prev && $n - $prev > 1): ?>
                                             <li class="page-item disabled"><span class="page-link">…</span></li>
                                         <?php endif; ?>
-                                        <li class="page-item <?= $n === $page ? 'active' : ''; ?>"><a class="page-link" href="<?= h($pg($n)); ?>#katalog"><?= $n; ?></a></li>
+                                        <li class="page-item <?= $n === $page ? 'active' : ''; ?>"><a class="page-link" href="<?= htmlspecialchars($pg($n)); ?>#katalog"><?= $n; ?></a></li>
                                         <?php $prev = $n; ?>
                                     <?php endforeach; ?>
                                     <li class="page-item <?= $page >= $total_pages ? 'disabled' : ''; ?>">
-                                        <a class="page-link" href="<?= h($pg($page + 1)); ?>#katalog"><span class="d-none d-sm-inline">Selanjutnya</span><i class="bi bi-chevron-right ms-1"></i></a>
+                                        <a class="page-link" href="<?= htmlspecialchars($pg($page + 1)); ?>#katalog"><span class="d-none d-sm-inline">Selanjutnya</span><i class="bi bi-chevron-right ms-1"></i></a>
                                     </li>
                                 </ul>
                             </nav>
@@ -338,7 +322,7 @@
             </section>
         </div>
 
-        <!-- Keunggulan -->
+        
         <section class="bg-white rounded-4 p-3 p-md-4 border shadow-sm my-4 my-lg-5">
             <div class="row g-3 g-md-4">
                 <div class="col-12 col-md-4">
@@ -371,7 +355,7 @@
             </div>
         </section>
 
-        <!-- FAQ -->
+        
         <section class="mb-4 mb-lg-5">
             <div class="mb-3">
                 <span class="text-success fw-bold text-uppercase small tracking-wide" style="font-size: 0.75rem;">Bantuan Belanja</span>
@@ -402,13 +386,11 @@
     <?php include(__DIR__ . '/layouts/footer.php'); ?>
 
     <script>
-        // Isi kembali kata kunci pada kolom pencarian navbar
         (function () {
             var s = document.getElementById('searchHeaderInput');
             if (s) s.value = <?= json_encode($q); ?>;
         })();
 
-        // Urutkan produk
         document.getElementById('sortSelect').addEventListener('change', function () {
             var u = new URL(window.location.href);
             u.searchParams.set('sort', this.value);
@@ -416,7 +398,6 @@
             window.location.href = u.toString();
         });
 
-        // Tampilan grid / daftar
         (function () {
             var grid = document.getElementById('productGrid');
             var gBtn = document.getElementById('gridBtn');
@@ -433,15 +414,6 @@
             try { setView(localStorage.getItem('katalogView') || 'grid'); } catch (e) {}
         })();
 
-        // Tombol favorit (tampilan saja)
-        document.querySelectorAll('.btn-wishlist').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                var icon = btn.querySelector('i');
-                var on = btn.classList.toggle('active');
-                icon.className = on ? 'bi bi-heart-fill' : 'bi bi-heart';
-            });
-        });
-        // Pertahankan posisi scroll saat filter diubah
         (function () {
             var KEY = 'katalogScrollY';
 

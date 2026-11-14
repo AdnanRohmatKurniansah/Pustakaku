@@ -1,18 +1,22 @@
 <?php
     session_start();
+
     require_once __DIR__ . '/config/database.php';
     require_once __DIR__ . '/cart/proses_keranjang.php';
 
-    const BATAS_GRATIS_ONGKIR = 150000;
+    if (!isset($_SESSION['user_id'])) {
+        $_SESSION['error'] = 'Silakan masuk ke akun Anda terlebih dahulu untuk melihat keranjang belanja.';
+        header('Location: auth/login.php');
+        exit;
+    }
 
-    if (!function_exists('formatRupiah')) {
-        function formatRupiah($angka) {
-            return 'Rp ' . number_format($angka, 0, ',', '.');
-        }
+    if (($_SESSION['role'] ?? '') === 'admin') {
+        $_SESSION['error'] = 'Akun admin tidak dapat menggunakan keranjang belanja pelanggan.';
+        header('Location: admin/index.php');
+        exit;
     }
-    function h($s) {
-        return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
-    }
+
+    const BATAS_GRATIS_ONGKIR = 150000;
 
     $keranjang = cart_items($conn);
     $items     = $keranjang['items'];
@@ -20,10 +24,12 @@
 
     $total_normal = 0.0;
     $total_bayar  = 0.0;
+
     foreach ($items as $it) {
         $total_normal += $it['harga'] * $it['qty'];
         $total_bayar  += $it['satuan'] * $it['qty'];
     }
+    
     $total_hemat = $total_normal - $total_bayar;
     $sisa_gratis = max(0, BATAS_GRATIS_ONGKIR - $total_bayar);
     $persen_gratis = BATAS_GRATIS_ONGKIR > 0 ? min(100, round($total_bayar / BATAS_GRATIS_ONGKIR * 100)) : 100;
@@ -37,259 +43,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
-    <style>
-
-        .min-w-0 { min-width: 0; }
-
-        .ship-icon {
-            width: 44px;
-            height: 44px;
-            flex-shrink: 0;
-            border-radius: 50%;
-            background: #eaf6ef;
-            color: #198754;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-        }
-
-        #shipBar {
-            transition: width 0.4s ease;
-        }
-
-        /* ---------- Checkbox ---------- */
-        .cart-check {
-            width: 1.15rem;
-            height: 1.15rem;
-            cursor: pointer;
-            border-color: #94a3b8;
-        }
-
-        .cart-check:checked {
-            background-color: #198754;
-            border-color: #198754;
-        }
-
-        .cart-check:focus {
-            border-color: #198754;
-            box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.15);
-        }
-
-        /* ---------- Daftar item ---------- */
-        .cart-store-head {
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-        }
-
-        .cart-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 14px;
-            padding: 1.1rem 1rem;
-            border-bottom: 1px solid #e2e8f0;
-            transition: opacity 0.25s ease, background-color 0.2s ease;
-        }
-
-        .cart-item:last-child {
-            border-bottom: 0;
-        }
-
-        .cart-item.is-removing {
-            opacity: 0;
-        }
-
-        .cart-item.is-busy {
-            opacity: 0.6;
-            pointer-events: none;
-        }
-
-        .cart-item-check {
-            padding-top: 0.2rem;
-        }
-
-        .cart-item-img {
-            position: relative;
-            flex: 0 0 92px;
-            width: 92px;
-            height: 124px;
-            background: #f8fafc;
-            border-radius: 0.75rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 6px;
-            overflow: hidden;
-        }
-
-        .cart-item-img img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            border-radius: 0.35rem;
-            box-shadow: -3px 4px 10px rgba(0, 0, 0, 0.12);
-        }
-
-        .cart-item-img .badge {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            z-index: 2;
-            font-size: 0.62rem;
-        }
-
-        .cart-item-body {
-            flex: 1 1 auto;
-            min-width: 0;
-        }
-
-        .cart-item-body .product-title {
-            min-height: 0;
-            font-size: 0.98rem;
-        }
-
-        .cart-remove {
-            flex-shrink: 0;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 0;
-            background: transparent;
-            color: #94a3b8;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .cart-remove:hover {
-            background: #fee2e2;
-            color: #dc2626;
-        }
-
-        /* ---------- Stepper jumlah ---------- */
-        .qty-stepper {
-            display: inline-flex;
-            align-items: center;
-            background: #eaf6ef;
-            border: 1px solid #d1e7dd;
-            border-radius: 999px;
-            padding: 2px;
-        }
-
-        .qty-btn {
-            width: 32px;
-            height: 32px;
-            border: 0;
-            border-radius: 50%;
-            background: transparent;
-            color: #198754;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-        }
-
-        .qty-btn:hover:not(:disabled) {
-            background: #ffffff;
-        }
-
-        .qty-btn:disabled {
-            color: #adb5bd;
-            cursor: not-allowed;
-        }
-
-        .qty-input {
-            width: 38px;
-            border: 0;
-            background: transparent;
-            text-align: center;
-            font-weight: 700;
-            font-size: 0.9rem;
-            color: #1e293b;
-            padding: 0;
-        }
-
-        .qty-input:focus {
-            outline: none;
-        }
-
-        /* ---------- Ringkasan ---------- */
-        .cart-summary {
-            position: sticky;
-            top: 150px;
-        }
-
-        .summary-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            font-size: 0.85rem;
-            color: #64748b;
-            margin-bottom: 0.6rem;
-        }
-
-        .summary-row span:last-child {
-            color: #1e293b;
-            font-weight: 600;
-        }
-
-        .summary-row span.text-success { color: #198754 !important; }
-        .summary-row span.text-muted { color: #94a3b8 !important; font-weight: 500; }
-
-        #btnCheckout:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-        }
-
-        /* ---------- Keranjang kosong ---------- */
-        .cart-empty-icon {
-            width: 84px;
-            height: 84px;
-            border-radius: 50%;
-            background: #eaf6ef;
-            color: #198754;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.4rem;
-        }
-
-        /* ---------- Toast ---------- */
-        .cart-toast-wrap {
-            position: fixed;
-            right: 16px;
-            bottom: 16px;
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            max-width: 340px;
-        }
-
-        /* ---------- Responsif ---------- */
-        @media (max-width: 575.98px) {
-            .cart-item {
-                gap: 10px;
-                padding: 0.9rem 0.75rem;
-            }
-            .cart-item-img {
-                flex-basis: 72px;
-                width: 72px;
-                height: 98px;
-            }
-            .cart-summary {
-                position: static;
-            }
-        }
-
-        @media (max-width: 991.98px) {
-            .cart-summary {
-                position: static;
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -297,7 +50,6 @@
     
     <main class="container my-3 my-md-4">
 
-        <!-- Judul halaman -->
         <section class="mb-3 mb-lg-4">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb small mb-2">
@@ -312,17 +64,15 @@
             <p class="text-muted small mb-0 mt-1">Kurasi literatur bermutu dan peranti menulis siap dikirimkan ke meja kerja Anda.</p>
         </section>
 
-<?php if (empty($items)): ?>
-        <!-- Keranjang kosong -->
-        <section class="bg-white border rounded-4 shadow-sm text-center p-4 p-md-5 cart-empty">
-            <div class="cart-empty-icon mx-auto mb-3"><i class="bi bi-bag"></i></div>
-            <h4 class="fw-bold text-dark mb-1">Keranjang Anda masih kosong</h4>
-            <p class="text-muted small mb-4">Yuk, jelajahi koleksi buku dan alat tulis pilihan kami.</p>
-            <a href="katalog.php" class="btn btn-success rounded-pill px-4 fw-semibold"><i class="bi bi-grid me-1"></i> Lihat Katalog</a>
-        </section>
-<?php else: ?>
+        <?php if (empty($items)): ?>
+            <section class="bg-white border rounded-4 shadow-sm text-center p-4 p-md-5 cart-empty">
+                <div class="cart-empty-icon mx-auto mb-3"><i class="bi bi-bag"></i></div>
+                <h4 class="fw-bold text-dark mb-1">Keranjang Anda masih kosong</h4>
+                <p class="text-muted small mb-4">Yuk, jelajahi koleksi buku dan alat tulis pilihan kami.</p>
+                <a href="katalog.php" class="btn btn-success rounded-pill px-4 fw-semibold"><i class="bi bi-grid me-1"></i> Lihat Katalog</a>
+            </section>
+        <?php else: ?>
 
-        <!-- Progres gratis ongkir -->
         <?php if (BATAS_GRATIS_ONGKIR > 0): ?>
         <section class="bg-white border rounded-4 shadow-sm p-3 p-md-4 mb-3 mb-lg-4">
             <div class="d-flex align-items-center gap-3 mb-2">
@@ -346,7 +96,6 @@
         <?php endif; ?>
 
         <div class="row g-3 g-lg-4">
-            <!-- ============ DAFTAR ITEM ============ -->
             <div class="col-12 col-lg-8">
                 <div class="bg-white border rounded-4 shadow-sm p-3 mb-3 d-flex align-items-center justify-content-between gap-2">
                     <div class="form-check m-0 d-flex align-items-center gap-2">
@@ -356,8 +105,7 @@
                     <button type="button" class="btn btn-link text-danger text-decoration-none fw-semibold small p-0" id="btnHapusTerpilih"><i class="bi bi-trash3 me-1"></i>Hapus Terpilih</button>
                 </div>
 
-                <div class="bg-white border rounded-4 shadow-sm overflow-hidden" id="cartList"
-                     data-batas="<?= (int) BATAS_GRATIS_ONGKIR; ?>">
+                <div class="bg-white border rounded-4 shadow-sm overflow-hidden" id="cartList" data-batas="<?= (int) BATAS_GRATIS_ONGKIR; ?>">
                     <div class="cart-store-head d-flex align-items-center justify-content-between gap-2 px-3 py-2">
                         <div class="d-flex align-items-center gap-2 fw-bold small text-dark">
                             <i class="bi bi-shop text-success"></i> PustakaKu Official Store
@@ -371,25 +119,21 @@
                             $persen = $ada_diskon ? round((($it['harga'] - $it['satuan']) / $it['harga']) * 100) : 0;
                             $tipis = $it['stok'] <= 10;
                         ?>
-                        <article class="cart-item"
-                                 data-id="<?= (int) $it['id']; ?>"
-                                 data-satuan="<?= $it['satuan']; ?>"
-                                 data-harga="<?= $it['harga']; ?>"
-                                 data-stok="<?= (int) $it['stok']; ?>">
+                        <article class="cart-item" data-id="<?= (int) $it['id']; ?>" data-satuan="<?= $it['satuan']; ?>" data-harga="<?= $it['harga']; ?>" data-stok="<?= (int) $it['stok']; ?>">
                             <div class="cart-item-check">
-                                <input class="form-check-input cart-check item-check m-0" type="checkbox" checked aria-label="Pilih <?= h($it['judul']); ?>">
+                                <input class="form-check-input cart-check item-check m-0" type="checkbox" checked aria-label="Pilih <?= htmlspecialchars($it['judul']); ?>">
                             </div>
 
                             <a href="#" class="cart-item-img">
                                 <?php if ($ada_diskon): ?><span class="badge bg-danger">-<?= $persen; ?>%</span><?php endif; ?>
-                                <img src="<?= h($it['gambar']); ?>" alt="<?= h($it['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/160x210/eaf6ef/198754?text=Buku';">
+                                <img src="<?= htmlspecialchars($it['gambar']); ?>" alt="<?= htmlspecialchars($it['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/160x210/eaf6ef/198754?text=Buku';">
                             </a>
 
                             <div class="cart-item-body">
                                 <div class="d-flex align-items-start justify-content-between gap-2">
                                     <div class="min-w-0">
-                                        <h6 class="product-title mb-1" title="<?= h($it['judul']); ?>"><?= h($it['judul']); ?></h6>
-                                        <div class="text-muted small"><?= h($it['penulis']); ?><?php if (!empty($it['penerbit'])): ?> &bull; <?= h($it['penerbit']); ?><?php endif; ?></div>
+                                        <h6 class="product-title mb-1" title="<?= htmlspecialchars($it['judul']); ?>"><?= htmlspecialchars($it['judul']); ?></h6>
+                                        <div class="text-muted small"><?= htmlspecialchars($it['penulis']); ?><?php if (!empty($it['penerbit'])): ?> &bull; <?= htmlspecialchars($it['penerbit']); ?><?php endif; ?></div>
                                         <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
                                             <?php if ($tipis): ?>
                                                 <span class="badge bg-danger-subtle text-danger fw-semibold"><i class="bi bi-exclamation-circle me-1"></i>Sisa <?= (int) $it['stok']; ?> eksemplar</span>
@@ -401,7 +145,7 @@
                                             <?php endif; ?>
                                         </div>
                                     </div>
-                                    <button type="button" class="cart-remove" data-aksi="hapus" title="Hapus dari keranjang" aria-label="Hapus <?= h($it['judul']); ?>"><i class="bi bi-x-lg"></i></button>
+                                    <button type="button" class="cart-remove" data-aksi="hapus" title="Hapus dari keranjang" aria-label="Hapus <?= htmlspecialchars($it['judul']); ?>"><i class="bi bi-x-lg"></i></button>
                                 </div>
 
                                 <div class="d-flex flex-wrap align-items-end justify-content-between gap-2 mt-3">
@@ -427,7 +171,6 @@
                 <a href="katalog.php" class="d-inline-flex align-items-center gap-1 text-success fw-semibold text-decoration-none small mt-3"><i class="bi bi-arrow-left"></i> Lanjutkan Berbelanja</a>
             </div>
 
-            <!-- ============ RINGKASAN ============ -->
             <aside class="col-12 col-lg-4">
                 <div class="cart-summary">
                     <div class="bg-white border rounded-4 shadow-sm p-3 p-md-4">
@@ -469,100 +212,49 @@
     </main>
 
     <?php include(__DIR__ . '/layouts/footer.php'); ?>
-    <!-- Modal Konfirmasi Hapus -->
-    <div class="modal fade" id="modalHapus" tabindex="-1"
-        aria-labelledby="modalHapusLabel" aria-hidden="true">
-
+    <div class="modal fade" id="modalHapus" tabindex="-1" aria-labelledby="modalHapusLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
-
                 <div class="modal-body text-center p-4">
-
-                    <div class="rounded-circle bg-danger-subtle text-danger
-                                d-flex align-items-center justify-content-center
-                                mx-auto mb-3"
-                        style="width: 70px; height: 70px; font-size: 2rem;">
+                    <div class="rounded-circle bg-danger-subtle text-danger d-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px; font-size: 2rem;">
                         <i class="bi bi-trash3"></i>
                     </div>
-
-                    <h5 class="fw-bold mb-2" id="modalHapusLabel">
-                        Hapus Buku?
-                    </h5>
-
-                    <p class="text-muted small mb-4" id="pesanHapus">
-                        Apakah kamu yakin ingin menghapus buku ini
-                        dari keranjang?
-                    </p>
-
+                    <h5 class="fw-bold mb-2" id="modalHapusLabel">Hapus Buku?</h5>
+                    <p class="text-muted small mb-4" id="pesanHapus">Apakah kamu yakin ingin menghapus buku ini dari keranjang?</p>
                     <div class="d-flex gap-2">
-
-                        <button type="button"
-                                class="btn btn-light border rounded-pill
-                                    flex-fill fw-semibold"
-                                data-bs-dismiss="modal">
-                            Batal
-                        </button>
-
-                        <button type="button"
-                                class="btn btn-danger rounded-pill
-                                    flex-fill fw-semibold"
-                                id="btnKonfirmasiHapus">
-                            <i class="bi bi-trash3 me-1"></i>
-                            Ya, Hapus
-                        </button>
-
+                        <button type="button" class="btn btn-light border rounded-pill flex-fill fw-semibold" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-danger rounded-pill flex-fill fw-semibold" id="btnKonfirmasiHapus"><i class="bi bi-trash3 me-1"></i>Ya, Hapus</button>
                     </div>
-
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="cartToastWrap" class="cart-toast-wrap"></div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="assets/js/keranjang.js"></script>
-</body>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-
             const filterButtons = document.querySelectorAll('.filter-btn');
             const bookCards = document.querySelectorAll('.book-card');
-
             filterButtons.forEach(button => {
-
                 button.addEventListener('click', function () {
-
                     const selectedCategory = this.dataset.filter;
-
-                    // Mengubah tampilan tombol aktif
                     filterButtons.forEach(btn => {
                         btn.classList.remove('active', 'btn-success');
                         btn.classList.add('btn-outline-success');
                     });
-
                     this.classList.add('active', 'btn-success');
                     this.classList.remove('btn-outline-success');
-
-                    // Filter buku
                     bookCards.forEach(card => {
-
                         const bookCategory = card.dataset.category;
-
-                        if (
-                            selectedCategory === 'all' ||
-                            bookCategory === selectedCategory
-                        ) {
+                        if (selectedCategory === 'all' || bookCategory === selectedCategory) {
                             card.style.display = '';
                         } else {
                             card.style.display = 'none';
                         }
-
                     });
-
                 });
-
             });
-
         });
-        </script>
+    </script>
+</body>
 </html>

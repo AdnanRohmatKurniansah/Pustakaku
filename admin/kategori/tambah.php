@@ -7,9 +7,6 @@
         header("Location: ../../auth/login.php");
         exit;
     }
-
-    $error = $_SESSION['error'] ?? '';
-    unset($_SESSION['error']);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -44,14 +41,6 @@
                     </div>
                 </div>
 
-                <?php if (!empty($error)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i>
-                        <div><?= htmlspecialchars($error); ?></div>
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
-
                 <div class="card p-4">
                     <form action="proses_tambah.php" method="POST" enctype="multipart/form-data">
                         <div class="mb-3">
@@ -63,7 +52,7 @@
                             <textarea class="form-control" id="deskripsi" name="deskripsi" rows="3" placeholder="Tuliskan keterangan singkat mengenai kategori ini..." required autofocus></textarea>
                         </div>
                         <div class="mb-4">
-                            <label for="gambar" class="form-label small fw-semibold text-secondary">Gambar / Ikon Kategori</label>
+                            <label for="gambar" class="form-label small fw-semibold text-secondary">Gambar / Ikon Kategori <span class="text-danger">*</span></label>
                             <input type="file" class="form-control" id="gambar" name="gambar" accept="image/*" required>
                             <div class="form-text small">Format yang didukung: JPG, PNG, WEBP. Maksimal 2MB.</div>
                         </div>

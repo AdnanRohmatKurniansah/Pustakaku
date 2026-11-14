@@ -1,3 +1,9 @@
+<?php
+$admin_pos = strpos($_SERVER['SCRIPT_NAME'], '/admin/');
+$sub_path = $admin_pos !== false ? substr($_SERVER['SCRIPT_NAME'], $admin_pos + 7) : '';
+$admin_root_prefix = str_repeat('../', substr_count($sub_path, '/') + 1);
+$admin_asset_prefix = $admin_root_prefix . 'assets/';
+?>
 <nav class="navbar top-navbar">
     <div class="container-fluid px-0">
         <div class="d-flex align-items-center gap-3">
@@ -26,11 +32,14 @@
                         </div>
                     </li>
                     <li>
-                        <a class="dropdown-item py-2" href="../admin/profile/index.php"><i class="bi bi-person-circle me-2"></i>Profile</a>
-                        <a class="dropdown-item py-2 text-danger" href="../admin/profile/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a>
+                        <a class="dropdown-item py-2" href="<?= $admin_root_prefix; ?>admin/profile/index.php"><i class="bi bi-person-circle me-2"></i>Profile</a>
+                        <a class="dropdown-item py-2 text-danger" href="<?= $admin_root_prefix; ?>auth/logout.php"><i class="bi bi-box-arrow-right me-2"></i>Keluar</a>
                     </li>
                 </ul>
             </div>
         </div>
     </div>
 </nav>
+
+<script src="<?= $admin_asset_prefix; ?>js/toast.js"></script>
+<?= tampilkan_alert_toast(); ?>

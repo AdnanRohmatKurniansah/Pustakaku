@@ -3,7 +3,9 @@
         <div class="sidebar-brand-icon d-flex justify-content-center align-items-center bg-success px-2 py-1 rounded-2">
             <i class="bi bi-book-half fs-5"></i>
         </div>
-        <span>PustakaKu</span>
+        <span>
+            <a class="text-white text-decoration-none" href="../index.php">PustakaKu</a>
+        </span>
         <button type="button" class="btn-close btn-close-white d-lg-none ms-auto" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
     </div>
 
@@ -13,56 +15,49 @@
 
     <ul class="nav flex-column mb-auto">
         <li class="nav-item">
-            <a class="nav-link"
-               href="admin/index.php" data-menu="dashboard">
+            <a class="nav-link" href="admin/index.php" data-menu="dashboard">
                 <i class="bi bi-grid-1x2-fill"></i>
                 <span>Dashboard</span>
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link"
-               href="admin/kategori/index.php" data-menu="kategori">
+            <a class="nav-link" href="admin/kategori/index.php" data-menu="kategori">
                 <i class="bi bi-tags-fill"></i>
                 <span>Kategori Buku</span>
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link"
-               href="admin/buku/index.php" data-menu="buku">
+            <a class="nav-link" href="admin/buku/index.php" data-menu="buku">
                 <i class="bi bi-journal-bookmark-fill"></i>
                 <span>Data Buku</span>
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link"
-               href="admin/supplier/index.php" data-menu="supplier">
+            <a class="nav-link" href="admin/supplier/index.php" data-menu="supplier">
                 <i class="bi bi-truck"></i>
                 <span>Supplier & Penerbit</span>
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link"
-               href="admin/restok/index.php" data-menu="restok">
+            <a class="nav-link" href="admin/restok/index.php" data-menu="restok">
                 <i class="bi bi-archive"></i>
                 <span>Restok Buku</span>
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link"
-               href="#">
+            <a class="nav-link" href="#">
                 <i class="bi bi-cart-check-fill"></i>
                 <span>Pesanan Masuk</span>
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link"
-               href="#">
+            <a class="nav-link" href="#">
                 <i class="bi bi-file-earmark-bar-graph-fill"></i>
                 <span>Laporan Penjualan</span>
             </a>

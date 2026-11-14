@@ -8,10 +8,6 @@
         exit;
     }
 
-    $success = $_SESSION['success'] ?? '';
-    $error = $_SESSION['error'] ?? '';
-    unset($_SESSION['success'], $_SESSION['error']);
-
     $query = mysqli_query($conn, "
         SELECT restok_log.*, buku.judul, buku.gambar, buku.isbn, supplier.nama_supplier 
         FROM restok_log 
@@ -52,22 +48,6 @@
                         </a>
                     </div>
                 </div>
-
-                <?php if (!empty($success)): ?>
-                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center" role="alert">
-                        <i class="bi bi-check-circle-fill me-2 flex-shrink-0"></i>
-                        <div><?= htmlspecialchars($success); ?></div>
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
-
-                <?php if (!empty($error)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i>
-                        <div><?= htmlspecialchars($error); ?></div>
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
 
                 <div class="card p-4">
                     <div class="table-responsive rounded-2">

@@ -1,8 +1,4 @@
 <?php
-/**
- * Endpoint AJAX: tambah buku ke keranjang.
- * Dipanggil dari assets/js/cart.js dengan method POST (id, qty).
- */
 session_start();
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/proses_keranjang.php';
@@ -15,10 +11,27 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$id  = (int) ($_POST['id'] ?? 0);
+if (!isset($_SESSION['user_id'])) {
+    echo json_encode([
+        'ok' => false,
+        'login_required' => true,
+        'message' => 'Silakan masuk ke akun Anda terlebih dahulu untuk belanja.'
+    ]);
+    exit;
+}
+
+if (($_SESSION['role'] ?? '') === 'admin') {
+    echo json_encode([
+        'ok' => false,
+        'message' => 'Akun admin tidak dapat berbelanja atau menambahkan produk ke keranjang.'
+    ]);
+    exit;
+}
+
+$id = (int) ($_POST['id'] ?? 0);
 $qty = (int) ($_POST['qty'] ?? 1);
 
 $hasil = cart_add($conn, $id, $qty);
-$hasil['count'] = $cart_count = isset($conn) ? cart_count($conn) : 0;;
+$hasil['count'] = isset($conn) ? cart_count($conn) : 0;
 
 echo json_encode($hasil);

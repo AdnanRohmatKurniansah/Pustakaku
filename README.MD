@@ -18,7 +18,7 @@
 **PustakaKu** adalah platform toko online terpadu yang memadukan katalog digital buku (fiksi, non-fiksi, pelajaran, dll.) dan alat tulis kantor/sekolah dengan sistem manajemen inventaris dan transaksi penjualan. 
 
 Sistem ini dirancang dengan dua hak akses utama:
-1. **Pelanggan (Customer):** Menjelajah katalog, melakukan pencarian dan filter cerdas, mengelola wishlist, belanja lewat keranjang, checkout belanja, upload bukti pembayaran, hingga cetak invoice belanja.
+1. **Pelanggan (Customer):** Menjelajah katalog, melakukan pencarian dan filter cerdas, belanja lewat keranjang, checkout belanja, upload bukti pembayaran, hingga cetak invoice belanja.
 2. **Administrator (Admin):** Mengelola produk (buku & ATK), kategori, stok & supplier, kode diskon/voucher, validasi pesanan, pemantauan statistik pendapatan, serta rekapitulasi laporan penjualan.
 
 ---
@@ -40,7 +40,7 @@ Sistem ini dirancang dengan dua hak akses utama:
 ### 3. Modul Etalase & Eksplorasi Produk (Pelanggan)
 * **Halaman Beranda (Landing Page) & Katalog Dinamis:** Tampilan buku terlaris (*best seller*), rilisan terbaru, dan detail spesifikasi produk.
 * **Pencarian Pintar & Multi-Filter:** Pencarian instan (judul/penulis/ISBN/merek), filter rentang harga, filter kategori, status ketersediaan stok, dan sorting (termurah, termahal, terlaris).
-* **Wishlist & Ulasan Pembeli:** Simpan produk favorit ke daftar keinginan dan fitur review/rating bintang setelah bertransaksi.
+* **Ulasan Pembeli:** Fitur review/rating bintang setelah bertransaksi.
 
 ### 4. Modul Keranjang & Transaksi Penjualan
 * **Sistem Shopping Cart (Keranjang Belanja):** Tambah barang, update kuantitas dinamis, pengecekan batas stok otomatis, dan kalkulasi subtotal.
@@ -57,37 +57,43 @@ Sistem ini dirancang dengan dua hak akses utama:
 
 ```text
 projek_web/
+├── akun.php
 ├── assets/            
 │   ├── css/
-│   │   ├── style.css                      
+│   │   └── style.css                      
 │   ├── js/
-│   │   ├── main.js                          
+│   │   └── cart.js                          
 │   └── uploads/                             
 ├── config/                       
-│   ├── database.php                      
+│   └── database.php                      
 ├── layouts/                     
 │   ├── admin/                
 │   ├── footer.php               
-│   ├── navbar.php                
+│   └── navbar.php                
 ├── auth/                         
 │   ├── login.php
+│   ├── process_login.php
 │   ├── register.php
+│   ├── process_register.php
 │   └── logout.php
+├── cart/
+│   ├── aksi_keranjang.php
+│   ├── proses_keranjang.php
+│   └── tambah.php
 ├── admin/                        
 │   ├── index.php                 
 │   ├── kategori/                 
-│   ├── produk/                   
+│   ├── buku/                   
 │   ├── supplier/                              
-│   ├── pesanan/                  
-│   └── laporan/                  
-├── customer/                     
+│   ├── restok/                  
+│   └── profile/                  
 ├── schema/                     
 │   └── pustakaku.sql             
 ├── index.php                     
 ├── katalog.php                   
-├── detail_produk.php             
+├── detail_buku.php
+├── detail_produk.php
 ├── keranjang.php                 
-├── checkout.php                  
 └── README.MD                    
 ```
 
