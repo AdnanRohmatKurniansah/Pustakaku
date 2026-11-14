@@ -2,6 +2,7 @@
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }   
+    
     $halaman_ini = basename($_SERVER['PHP_SELF']);
     $kat_dipilih = array_map('intval', (array)($_GET['kategori'] ?? []));
     $promo_aktif = ($_GET['promo'] ?? '') === '1';
@@ -9,7 +10,9 @@
     if (!isset($conn) || !$conn) {
         require_once __DIR__ . '/../config/database.php';
     }
+    
     require_once __DIR__ . '/../cart/proses_keranjang.php';
+
     $cart_count = isset($conn) ? cart_count($conn) : 0;
 
     $nav_kategori = [];
@@ -81,6 +84,7 @@
                             <?php endif; ?>
                             <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
                                 <li><a class="dropdown-item py-2" href="akun.php"><i class="bi bi-person-circle me-2 text-success"></i>Akun Saya</a></li>
+                                <li><a class="dropdown-item py-2" href="akun.php#pesanan"><i class="bi bi-receipt me-2 text-success"></i>Pesanan Saya</a></li>
                             <?php endif; ?>
                             <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
                                 <li><a class="dropdown-item py-2" href="keranjang.php"><i class="bi bi-bag-check me-2 text-success"></i>Keranjang Saya</a></li>

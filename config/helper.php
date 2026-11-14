@@ -31,3 +31,18 @@
         }
     }
 
+    if (!function_exists('status_pesanan_badge')) {
+        function status_pesanan_badge($status) {
+            $map = [
+                'menunggu_pembayaran' => ['badge bg-warning-subtle text-warning border border-warning-subtle', 'bi bi-clock-history', 'Menunggu Pembayaran'],
+                'menunggu_verifikasi' => ['badge bg-info-subtle text-info border border-info-subtle', 'bi bi-patch-check', 'Menunggu Verifikasi'],
+                'diproses' => ['badge bg-primary-subtle text-primary border border-primary-subtle', 'bi bi-box-seam', 'Diproses'],
+                'dikirim' => ['badge bg-secondary-subtle text-dark border border-secondary-subtle', 'bi bi-truck', 'Dikirim'],
+                'selesai' => ['badge bg-success-subtle text-success border border-success-subtle', 'bi bi-check-circle-fill', 'Selesai'],
+                'dibatalkan' => ['badge bg-danger-subtle text-danger border border-danger-subtle', 'bi bi-x-circle', 'Dibatalkan']
+            ];
+            $item = $map[$status] ?? ['badge bg-light text-secondary border', 'bi bi-info-circle', ucfirst(str_replace('_', ' ', $status))];
+            return '<span class="' . $item[0] . ' rounded-pill px-3 py-2 fw-semibold"><i class="' . $item[1] . ' me-1"></i>' . $item[2] . '</span>';
+        }
+    }
+

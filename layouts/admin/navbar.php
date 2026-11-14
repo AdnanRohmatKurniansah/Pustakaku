@@ -1,8 +1,8 @@
 <?php
-$admin_pos = strpos($_SERVER['SCRIPT_NAME'], '/admin/');
-$sub_path = $admin_pos !== false ? substr($_SERVER['SCRIPT_NAME'], $admin_pos + 7) : '';
-$admin_root_prefix = str_repeat('../', substr_count($sub_path, '/') + 1);
-$admin_asset_prefix = $admin_root_prefix . 'assets/';
+    $admin_pos = strpos($_SERVER['SCRIPT_NAME'], '/admin/');
+    $sub_path = $admin_pos !== false ? substr($_SERVER['SCRIPT_NAME'], $admin_pos + 7) : '';
+    $admin_root_prefix = str_repeat('../', substr_count($sub_path, '/') + 1);
+    $admin_asset_prefix = $admin_root_prefix . 'assets/';
 ?>
 <nav class="navbar top-navbar">
     <div class="container-fluid px-0">

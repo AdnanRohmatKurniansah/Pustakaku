@@ -11,7 +11,9 @@
             wrap = document.createElement('div');
             wrap.id = 'cartToastWrap';
             wrap.className = 'cart-toast-wrap';
-        wrap.style.cssText = 'position:fixed!important;top:20px!important;right:20px!important;z-index:9999!important;display:flex!important;flex-direction:column!important;gap:8px!important;max-width:350px!important;width:auto!important;pointer-events:none!important;';
+            wrap.style.cssText = 'position:fixed!important;top:20px!important;right:20px!important;z-index:9999!important;display:flex!important;flex-direction:column!important;gap:8px!important;max-width:350px!important;width:auto!important;pointer-events:none!important;';
+            document.body.appendChild(wrap);
+        }
 
         const toast = document.createElement('div');
         toast.className = 'shadow rounded-3 px-3 py-2 small fw-semibold text-white d-flex align-items-start gap-2 ' + (sukses ? 'bg-success' : 'bg-danger');
@@ -277,4 +279,30 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     updateTombolJumlah();
+
+    const checkoutForm = document.getElementById('checkoutForm');
+    if (checkoutForm) {
+        checkoutForm.addEventListener('submit', function (e) {
+            const checkedBoxes = document.querySelectorAll('.item-check:checked');
+            if (checkedBoxes.length === 0) {
+                e.preventDefault();
+                window.tampilkanCartToast('Pilih minimal satu buku di keranjang untuk melanjutkan ke pembayaran.', false);
+                return;
+            }
+            const container = document.getElementById('checkoutIds');
+            if (container) {
+                container.innerHTML = '';
+                checkedBoxes.forEach(function (cb) {
+                    const item = cb.closest('.cart-item');
+                    if (item && item.dataset.id) {
+                        const hidden = document.createElement('input');
+                        hidden.type = 'hidden';
+                        hidden.name = 'cart_ids[]';
+                        hidden.value = item.dataset.id;
+                        container.appendChild(hidden);
+                    }
+                });
+            }
+        });
+    }
 });

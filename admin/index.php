@@ -1,5 +1,5 @@
 <?php
-    include('../config/database.php');
+    require_once __DIR__ . '/../config/database.php';
 
     session_start();
     
@@ -23,6 +23,8 @@
     $q_pengguna = mysqli_query($conn, "SELECT COUNT(*) AS total FROM users WHERE role = 'pelanggan'");
     $row_pengguna = mysqli_fetch_assoc($q_pengguna);
     $total_pengguna = $row_pengguna['total'] ?? 0;
+
+    $q_recent_orders = mysqli_query($conn, "SELECT p.*, u.nama_lengkap AS nama_pelanggan FROM pesanan p LEFT JOIN users u ON p.user_id = u.id ORDER BY p.id DESC LIMIT 5");
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -123,6 +125,63 @@
                                 <span>Pengguna aktif</span>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="card p-3 p-md-4">
+                    <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-0">Pesanan Masuk Terbaru</h5>
+                            <p class="text-muted small mb-0">Daftar transaksi pesanan terkini dari pelanggan</p>
+                        </div>
+                        <a href="pesanan/index.php" class="btn btn-outline-success btn-sm rounded-pill px-3 fw-semibold">
+                            <span>Lihat Semua</span>
+                            <i class="bi bi-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+
+                    <div class="table-responsive rounded-2">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>No. Pesanan</th>
+                                    <th>Tanggal</th>
+                                    <th>Pelanggan</th>
+                                    <th>Total Bayar</th>
+                                    <th>Metode</th>
+                                    <th>Status</th>
+                                    <th class="text-center" style="width: 100px;">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php if (mysqli_num_rows($q_recent_orders) === 0): ?>
+                                    <tr>
+                                        <td colspan="7" class="text-center py-4 text-muted">
+                                            <i class="bi bi-inbox fs-2 d-block mb-1 text-secondary"></i>
+                                            <span>Belum ada pesanan yang masuk.</span>
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php while ($ord = mysqli_fetch_assoc($q_recent_orders)): ?>
+                                        <tr>
+                                            <td>
+                                                <a href="pesanan/detail.php?id=<?= (int)$ord['id']; ?>" class="fw-bold text-success text-decoration-none font-monospace small">
+                                                    <?= htmlspecialchars($ord['nomor_pesanan']); ?>
+                                                </a>
+                                            </td>
+                                            <td class="small text-muted" style="white-space: nowrap;"><?= date('d/m/Y H:i', strtotime($ord['created_at'])); ?></td>
+                                            <td class="small fw-semibold text-dark"><?= htmlspecialchars($ord['nama_pelanggan'] ?? 'Pengguna Dihapus'); ?></td>
+                                            <td class="small fw-bold text-dark"><?= formatRupiah($ord['total_bayar']); ?></td>
+                                            <td class="small text-muted"><?= htmlspecialchars($ord['metode_pembayaran']); ?></td>
+                                            <td><?= status_pesanan_badge($ord['status_pesanan']); ?></td>
+                                            <td class="text-center">
+                                                <a href="pesanan/detail.php?id=<?= (int)$ord['id']; ?>" class="btn btn-sm btn-outline-success rounded-pill px-3 py-1 fw-semibold">Detail</a>
+                                            </td>
+                                        </tr>
+                                    <?php endwhile; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </main>

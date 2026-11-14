@@ -1,6 +1,6 @@
 <?php
     session_start();
-    include('../config/database.php');
+    require_once __DIR__ . '/../config/database.php';
     require_once __DIR__ . '/../cart/proses_keranjang.php';
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {

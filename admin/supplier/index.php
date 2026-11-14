@@ -1,5 +1,6 @@
 <?php
-    include('../../config/database.php');
+    require_once __DIR__ . '/../../config/database.php';
+
     session_start();
 
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -55,7 +56,6 @@
                                     <th>Telepon</th>
                                     <th>Email</th>
                                     <th>Alamat</th>
-                                    
                                     <th>Diupdate</th>
                                     <th style="width: 100px;" class="text-center">Aksi</th>
                                 </tr>
@@ -67,13 +67,13 @@
                                             <td class="fw-semibold text-muted"><?= $no++; ?></td>
                                             
                                             <td>
-                                                <div class="fw-bold text-dark"><?= htmlspecialchars($row['nama_supplier']); ?></div>
+                                                <div class="fw-semibold text-dark"><?= htmlspecialchars($row['nama_supplier']); ?></div>
                                             </td>
                                             <td>
-                                                <div class="fw-bold text-dark"><?= htmlspecialchars($row['telepon']); ?></div>
+                                                <div class="text-dark"><?= htmlspecialchars($row['telepon']); ?></div>
                                             </td>
                                             <td>
-                                                <div class="fw-bold text-dark"><?= htmlspecialchars($row['email']); ?></div>
+                                                <div class="text-dark"><?= htmlspecialchars($row['email']); ?></div>
                                             </td>
                                             <td>
                                                 <span class="text-secondary small"><?= htmlspecialchars($row['alamat'] ?: '-'); ?></span>
