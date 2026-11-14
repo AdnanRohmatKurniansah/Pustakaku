@@ -1,21 +1,21 @@
 <?php
-session_start();
-require_once __DIR__ . '/../config/helper.php';
+    session_start();
+    require_once __DIR__ . '/../config/helper.php';
 
-if (isset($_SESSION['user_id']) && isset($_SESSION['role'])) {
-    if ($_SESSION['role'] === 'admin') {
-        header("Location: ../admin/index.php");
-        exit;
-    } else {
-        header("Location: ../index.php");
-        exit;
+    if (isset($_SESSION['user_id']) && isset($_SESSION['role'])) {
+        if ($_SESSION['role'] === 'admin') {
+            header("Location: ../admin/index.php");
+            exit;
+        } else {
+            header("Location: ../index.php");
+            exit;
+        }
     }
-}
 
-$old_nama = $_SESSION['old_nama'] ?? '';
-$old_email = $_SESSION['old_email'] ?? '';
-$old_telepon = $_SESSION['old_telepon'] ?? '';
-unset($_SESSION['old_nama'], $_SESSION['old_email'], $_SESSION['old_telepon']);
+    $old_nama = $_SESSION['old_nama'] ?? '';
+    $old_email = $_SESSION['old_email'] ?? '';
+    $old_telepon = $_SESSION['old_telepon'] ?? '';
+    unset($_SESSION['old_nama'], $_SESSION['old_email'], $_SESSION['old_telepon']);
 ?>
 <!DOCTYPE html>
 <html lang="id">

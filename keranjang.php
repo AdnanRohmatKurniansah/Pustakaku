@@ -53,13 +53,12 @@
         <section class="mb-3 mb-lg-4">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb small mb-2">
-                    <li class="breadcrumb-item"><a href="index.php" class="text-success text-decoration-none"><i class="bi bi-house-door me-1"></i>Beranda</a></li>
+                    <li class="breadcrumb-item"><a href="index.php" class="text-success text-decoration-none">Beranda</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Keranjang Belanja</li>
                 </ol>
             </nav>
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <h2 class="fw-bold text-dark mb-0">Keranjang Belanja Saya</h2>
-                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-2 fw-semibold" id="headerCount"><i class="bi bi-bag me-1"></i><?= $jumlah; ?> Item</span>
             </div>
             <p class="text-muted small mb-0 mt-1">Kurasi literatur bermutu dan peranti menulis siap dikirimkan ke meja kerja Anda.</p>
         </section>

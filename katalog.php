@@ -1,5 +1,6 @@
 <?php
     session_start();
+
     require_once __DIR__ . '/config/database.php';
 
     function katalog_url(array $params): string {
@@ -66,8 +67,10 @@
                    CASE WHEN b.harga_diskon > 0 AND b.harga > 0 THEN (b.harga - b.harga_diskon) / b.harga ELSE 0 END AS persen_diskon
             FROM buku b JOIN kategori k ON b.kategori_id = k.id
             $where_sql ORDER BY $order_sql LIMIT $per_page OFFSET $offset";
+
     $produk = [];
     $res = mysqli_query($conn, $sql);
+    
     if ($res) {
         while ($row = mysqli_fetch_assoc($res)) {
             $harga = (float)$row['harga'];

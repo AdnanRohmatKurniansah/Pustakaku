@@ -50,14 +50,14 @@
         </li>
 
         <li class="nav-item">
-            <a class="nav-link" href="#">
+            <a class="nav-link" href="admin/pesanan/index.php" data-menu="pesanan">
                 <i class="bi bi-cart-check-fill"></i>
                 <span>Pesanan Masuk</span>
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link" href="#">
+            <a class="nav-link" href="admin/laporan/index.php" data-menu="laporan">
                 <i class="bi bi-file-earmark-bar-graph-fill"></i>
                 <span>Laporan Penjualan</span>
             </a>
@@ -83,7 +83,9 @@ document.addEventListener('DOMContentLoaded', function () {
             kategori: '/admin/kategori/index.php',
             buku: '/admin/buku/index.php',
             restok: '/admin/restok/index.php',
-            supplier: '/admin/supplier/index.php'
+            supplier: '/admin/supplier/index.php',
+            pesanan: '/admin/pesanan/index.php',
+            laporan: '/admin/laporan/index.php'
         };
 
         if (menuPaths[menu]) {

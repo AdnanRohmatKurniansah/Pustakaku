@@ -1,110 +1,110 @@
 <?php
-session_start();
-require_once __DIR__ . '/config/database.php';
-require_once __DIR__ . '/cart/proses_keranjang.php';
+    session_start();
+    require_once __DIR__ . '/config/database.php';
+    require_once __DIR__ . '/cart/proses_keranjang.php';
 
 
-$id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
-if ($id <= 0) {
-    header("Location: katalog.php");
-    exit;
-}
+    $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+    if ($id <= 0) {
+        header("Location: katalog.php");
+        exit;
+    }
 
-$res = mysqli_query($conn, "SELECT b.*, k.nama_kategori FROM buku b JOIN kategori k ON b.kategori_id = k.id WHERE b.id = '$id'");
-$buku = $res ? mysqli_fetch_assoc($res) : null;
-if (!$buku) {
-    header("Location: katalog.php");
-    exit;
-}
+    $res = mysqli_query($conn, "SELECT b.*, k.nama_kategori FROM buku b JOIN kategori k ON b.kategori_id = k.id WHERE b.id = '$id'");
+    $buku = $res ? mysqli_fetch_assoc($res) : null;
+    if (!$buku) {
+        header("Location: katalog.php");
+        exit;
+    }
 
-$user_id = (int)($_SESSION['user_id'] ?? 0);
-$user_role = $_SESSION['role'] ?? '';
-$is_customer = ($user_id > 0 && $user_role === 'pelanggan');
+    $user_id = (int)($_SESSION['user_id'] ?? 0);
+    $user_role = $_SESSION['role'] ?? '';
+    $is_customer = ($user_id > 0 && $user_role === 'pelanggan');
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'tambah_ulasan') {
-    if (!$is_customer) {
-        $_SESSION['error'] = 'Hanya pelanggan yang dapat mengirimkan ulasan.';
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['aksi']) && $_POST['aksi'] === 'tambah_ulasan') {
+        if (!$is_customer) {
+            $_SESSION['error'] = 'Hanya pelanggan yang dapat mengirimkan ulasan.';
+            header("Location: detail_buku.php?id=" . $id . "#ulasan");
+            exit;
+        }
+
+        $cek_beli = mysqli_query($conn, "SELECT dp.id FROM detail_pesanan dp JOIN pesanan p ON dp.pesanan_id = p.id WHERE p.user_id = '$user_id' AND dp.buku_id = '$id' AND p.status_pesanan IN ('selesai', 'dikirim', 'diproses') LIMIT 1");
+        if (!$cek_beli || mysqli_num_rows($cek_beli) == 0) {
+            $_SESSION['ulasan_error'] = 'Anda hanya dapat memberikan ulasan setelah membeli buku ini.';
+            header("Location: detail_buku.php?id=" . $id . "#ulasan");
+            exit;
+        }
+
+        $rating = (int)($_POST['rating'] ?? 5);
+        if ($rating < 1) $rating = 1;
+        if ($rating > 5) $rating = 5;
+        $komentar = trim($_POST['komentar'] ?? '');
+        if (empty($komentar)) {
+            $_SESSION['error'] = 'Kolom ulasan tidak boleh kosong.';
+            header("Location: detail_buku.php?id=" . $id . "#ulasan");
+            exit;
+        }
+
+        $komentar_esc = mysqli_real_escape_string($conn, $komentar);
+        $cek_ada = mysqli_query($conn, "SELECT id FROM ulasan WHERE user_id = '$user_id' AND buku_id = '$id' LIMIT 1");
+        if ($cek_ada && mysqli_num_rows($cek_ada) > 0) {
+            mysqli_query($conn, "UPDATE ulasan SET rating = '$rating', komentar = '$komentar_esc', created_at = NOW() WHERE user_id = '$user_id' AND buku_id = '$id'");
+            $_SESSION['success'] = 'Ulasan Anda berhasil diperbarui!';
+        } else {
+            mysqli_query($conn, "INSERT INTO ulasan (user_id, buku_id, rating, komentar, created_at) VALUES ('$user_id', '$id', '$rating', '$komentar_esc', NOW())");
+            $_SESSION['success'] = 'Terima kasih, ulasan Anda berhasil dikirim!';
+        }
+
         header("Location: detail_buku.php?id=" . $id . "#ulasan");
         exit;
     }
 
-    $cek_beli = mysqli_query($conn, "SELECT dp.id FROM detail_pesanan dp JOIN pesanan p ON dp.pesanan_id = p.id WHERE p.user_id = '$user_id' AND dp.buku_id = '$id' AND p.status_pesanan IN ('selesai', 'dikirim', 'diproses') LIMIT 1");
-    if (!$cek_beli || mysqli_num_rows($cek_beli) == 0) {
-        $_SESSION['ulasan_error'] = 'Anda hanya dapat memberikan ulasan setelah membeli buku ini.';
-        header("Location: detail_buku.php?id=" . $id . "#ulasan");
-        exit;
+    $q_avg = mysqli_query($conn, "SELECT AVG(rating) AS rata_rata, COUNT(*) AS total FROM ulasan WHERE buku_id = '$id'");
+    $row_avg = $q_avg ? mysqli_fetch_assoc($q_avg) : null;
+    $total_ulasan = (int)($row_avg['total'] ?? 0);
+    $rata_rata = $total_ulasan > 0 ? round((float)$row_avg['rata_rata'], 1) : 0;
+
+    $sudah_beli = false;
+    if ($is_customer) {
+        $q_beli = mysqli_query($conn, "SELECT dp.id FROM detail_pesanan dp JOIN pesanan p ON dp.pesanan_id = p.id WHERE p.user_id = '$user_id' AND dp.buku_id = '$id' AND p.status_pesanan IN ('selesai', 'dikirim', 'diproses') LIMIT 1");
+        if ($q_beli && mysqli_num_rows($q_beli) > 0) {
+            $sudah_beli = true;
+        }
     }
 
-    $rating = (int)($_POST['rating'] ?? 5);
-    if ($rating < 1) $rating = 1;
-    if ($rating > 5) $rating = 5;
-    $komentar = trim($_POST['komentar'] ?? '');
-    if (empty($komentar)) {
-        $_SESSION['error'] = 'Kolom ulasan tidak boleh kosong.';
-        header("Location: detail_buku.php?id=" . $id . "#ulasan");
-        exit;
+    $ulasan_saya = null;
+    if ($is_customer) {
+        $q_my = mysqli_query($conn, "SELECT * FROM ulasan WHERE user_id = '$user_id' AND buku_id = '$id' LIMIT 1");
+        if ($q_my && mysqli_num_rows($q_my) > 0) {
+            $ulasan_saya = mysqli_fetch_assoc($q_my);
+        }
     }
 
-    $komentar_esc = mysqli_real_escape_string($conn, $komentar);
-    $cek_ada = mysqli_query($conn, "SELECT id FROM ulasan WHERE user_id = '$user_id' AND buku_id = '$id' LIMIT 1");
-    if ($cek_ada && mysqli_num_rows($cek_ada) > 0) {
-        mysqli_query($conn, "UPDATE ulasan SET rating = '$rating', komentar = '$komentar_esc', created_at = NOW() WHERE user_id = '$user_id' AND buku_id = '$id'");
-        $_SESSION['success'] = 'Ulasan Anda berhasil diperbarui!';
-    } else {
-        mysqli_query($conn, "INSERT INTO ulasan (user_id, buku_id, rating, komentar, created_at) VALUES ('$user_id', '$id', '$rating', '$komentar_esc', NOW())");
-        $_SESSION['success'] = 'Terima kasih, ulasan Anda berhasil dikirim!';
+    $daftar_ulasan = [];
+    $q_ulasan = mysqli_query($conn, "SELECT u.*, us.nama_lengkap, us.foto_profil FROM ulasan u JOIN users us ON u.user_id = us.id WHERE u.buku_id = '$id' ORDER BY u.id DESC");
+    if ($q_ulasan) {
+        while ($ru = mysqli_fetch_assoc($q_ulasan)) {
+            $daftar_ulasan[] = $ru;
+        }
     }
 
-    header("Location: detail_buku.php?id=" . $id . "#ulasan");
-    exit;
-}
-
-$q_avg = mysqli_query($conn, "SELECT AVG(rating) AS rata_rata, COUNT(*) AS total FROM ulasan WHERE buku_id = '$id'");
-$row_avg = $q_avg ? mysqli_fetch_assoc($q_avg) : null;
-$total_ulasan = (int)($row_avg['total'] ?? 0);
-$rata_rata = $total_ulasan > 0 ? round((float)$row_avg['rata_rata'], 1) : 0;
-
-$sudah_beli = false;
-if ($is_customer) {
-    $q_beli = mysqli_query($conn, "SELECT dp.id FROM detail_pesanan dp JOIN pesanan p ON dp.pesanan_id = p.id WHERE p.user_id = '$user_id' AND dp.buku_id = '$id' AND p.status_pesanan IN ('selesai', 'dikirim', 'diproses') LIMIT 1");
-    if ($q_beli && mysqli_num_rows($q_beli) > 0) {
-        $sudah_beli = true;
+    $buku_terkait = [];
+    $kat_id = (int)$buku['kategori_id'];
+    $q_terkait = mysqli_query($conn, "SELECT id, judul, penulis, harga, harga_diskon, stok, gambar FROM buku WHERE kategori_id = '$kat_id' AND id != '$id' ORDER BY id DESC LIMIT 4");
+    if ($q_terkait) {
+        while ($rt = mysqli_fetch_assoc($q_terkait)) {
+            $buku_terkait[] = $rt;
+        }
     }
-}
 
-$ulasan_saya = null;
-if ($is_customer) {
-    $q_my = mysqli_query($conn, "SELECT * FROM ulasan WHERE user_id = '$user_id' AND buku_id = '$id' LIMIT 1");
-    if ($q_my && mysqli_num_rows($q_my) > 0) {
-        $ulasan_saya = mysqli_fetch_assoc($q_my);
-    }
-}
-
-$daftar_ulasan = [];
-$q_ulasan = mysqli_query($conn, "SELECT u.*, us.nama_lengkap, us.foto_profil FROM ulasan u JOIN users us ON u.user_id = us.id WHERE u.buku_id = '$id' ORDER BY u.id DESC");
-if ($q_ulasan) {
-    while ($ru = mysqli_fetch_assoc($q_ulasan)) {
-        $daftar_ulasan[] = $ru;
-    }
-}
-
-$buku_terkait = [];
-$kat_id = (int)$buku['kategori_id'];
-$q_terkait = mysqli_query($conn, "SELECT id, judul, penulis, harga, harga_diskon, stok, gambar FROM buku WHERE kategori_id = '$kat_id' AND id != '$id' ORDER BY id DESC LIMIT 4");
-if ($q_terkait) {
-    while ($rt = mysqli_fetch_assoc($q_terkait)) {
-        $buku_terkait[] = $rt;
-    }
-}
-
-$harga = (float)$buku['harga'];
-$diskon = (float)$buku['harga_diskon'];
-$ada_diskon = $diskon > 0 && $diskon < $harga;
-$harga_final = $ada_diskon ? $diskon : $harga;
-$persen = $ada_diskon ? round((($harga - $diskon) / $harga) * 100) : 0;
-$stok = (int)$buku['stok'];
-$habis = $stok <= 0;
-$gambar = (!empty($buku['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $buku['gambar'])) ? ('assets/uploads/buku/' . $buku['gambar']) : 'assets/images/banner/banner1.jpg';
+    $harga = (float)$buku['harga'];
+    $diskon = (float)$buku['harga_diskon'];
+    $ada_diskon = $diskon > 0 && $diskon < $harga;
+    $harga_final = $ada_diskon ? $diskon : $harga;
+    $persen = $ada_diskon ? round((($harga - $diskon) / $harga) * 100) : 0;
+    $stok = (int)$buku['stok'];
+    $habis = $stok <= 0;
+    $gambar = (!empty($buku['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $buku['gambar'])) ? ('assets/uploads/buku/' . $buku['gambar']) : 'assets/images/banner/banner1.jpg';
 ?>
 <!DOCTYPE html>
 <html lang="id">

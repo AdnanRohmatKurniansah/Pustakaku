@@ -1,141 +1,160 @@
 <?php
-session_start();
-require_once __DIR__ . '/config/database.php';
-require_once __DIR__ . '/cart/proses_keranjang.php';
+    session_start();
+    require_once __DIR__ . '/config/database.php';
+    require_once __DIR__ . '/cart/proses_keranjang.php';
 
-if (!isset($_SESSION['user_id'])) {
-    $_SESSION['error'] = "Silakan masuk terlebih dahulu untuk mengakses akun Anda.";
-    $_SESSION['redirect_after_login'] = 'akun.php';
-    header("Location: auth/login.php");
-    exit;
-}
+    if (!isset($_SESSION['user_id'])) {
+        $_SESSION['error'] = "Silakan masuk terlebih dahulu untuk mengakses akun Anda.";
+        $_SESSION['redirect_after_login'] = 'akun.php';
+        header("Location: auth/login.php");
+        exit;
+    }
 
-$user_id = (int) $_SESSION['user_id'];
+    $user_id = (int) $_SESSION['user_id'];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $aksi = $_POST['aksi'] ?? '';
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $aksi = $_POST['aksi'] ?? '';
 
-    if ($aksi === 'update_profile') {
-        $nama_lengkap = trim($_POST['nama_lengkap'] ?? '');
-        $no_telepon = trim($_POST['no_telepon'] ?? '');
-        $alamat_lengkap = trim($_POST['alamat_lengkap'] ?? '');
+        if ($aksi === 'update_profile') {
+            $nama_lengkap = trim($_POST['nama_lengkap'] ?? '');
+            $no_telepon = trim($_POST['no_telepon'] ?? '');
+            $alamat_lengkap = trim($_POST['alamat_lengkap'] ?? '');
 
-        if (empty($nama_lengkap)) {
-            $_SESSION['error'] = "Nama lengkap tidak boleh kosong!";
+            if (empty($nama_lengkap)) {
+                $_SESSION['error'] = "Nama lengkap tidak boleh kosong!";
+                header("Location: akun.php");
+                exit;
+            }
+
+            $foto_baru = null;
+            if (isset($_FILES['foto_profil']) && $_FILES['foto_profil']['error'] === UPLOAD_ERR_OK) {
+                $file_tmp = $_FILES['foto_profil']['tmp_name'];
+                $file_name = $_FILES['foto_profil']['name'];
+                $file_size = $_FILES['foto_profil']['size'];
+                $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
+                $allowed_ext = ['jpg', 'jpeg', 'png', 'webp'];
+
+                if (!in_array($file_ext, $allowed_ext)) {
+                    $_SESSION['error'] = "Format foto hanya mendukung JPG, JPEG, PNG, atau WEBP!";
+                    header("Location: akun.php");
+                    exit;
+                }
+
+                if ($file_size > 2 * 1024 * 1024) {
+                    $_SESSION['error'] = "Ukuran file foto maksimal 2MB!";
+                    header("Location: akun.php");
+                    exit;
+                }
+
+                $unique_name = 'user_' . $user_id . '_' . time() . '.' . $file_ext;
+                $upload_dir = __DIR__ . '/assets/uploads/user/';
+                if (!is_dir($upload_dir)) {
+                    mkdir($upload_dir, 0777, true);
+                }
+
+                $target_file = $upload_dir . $unique_name;
+                if (move_uploaded_file($file_tmp, $target_file)) {
+                    $foto_baru = $unique_name;
+
+                    $q_old = mysqli_query($conn, "SELECT foto_profil FROM users WHERE id = '$user_id'");
+                    $old_row = $q_old ? mysqli_fetch_assoc($q_old) : null;
+                    if ($old_row && !empty($old_row['foto_profil']) && file_exists($upload_dir . $old_row['foto_profil'])) {
+                        @unlink($upload_dir . $old_row['foto_profil']);
+                    }
+                }
+            }
+
+            $nama_esc = mysqli_real_escape_string($conn, $nama_lengkap);
+            $telp_esc = mysqli_real_escape_string($conn, $no_telepon);
+            $alamat_esc = mysqli_real_escape_string($conn, $alamat_lengkap);
+
+            if ($foto_baru !== null) {
+                $foto_esc = mysqli_real_escape_string($conn, $foto_baru);
+                mysqli_query($conn, "UPDATE users SET nama_lengkap = '$nama_esc', no_telepon = '$telp_esc', alamat_lengkap = '$alamat_esc', foto_profil = '$foto_esc', updated_at = NOW() WHERE id = '$user_id'");
+            } else {
+                mysqli_query($conn, "UPDATE users SET nama_lengkap = '$nama_esc', no_telepon = '$telp_esc', alamat_lengkap = '$alamat_esc', updated_at = NOW() WHERE id = '$user_id'");
+            }
+
+            $_SESSION['nama_lengkap'] = $nama_lengkap;
+            $_SESSION['success'] = "Data profil berhasil diperbarui!";
             header("Location: akun.php");
             exit;
         }
 
-        $foto_baru = null;
-        if (isset($_FILES['foto_profil']) && $_FILES['foto_profil']['error'] === UPLOAD_ERR_OK) {
-            $file_tmp = $_FILES['foto_profil']['tmp_name'];
-            $file_name = $_FILES['foto_profil']['name'];
-            $file_size = $_FILES['foto_profil']['size'];
-            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-            $allowed_ext = ['jpg', 'jpeg', 'png', 'webp'];
+        if ($aksi === 'update_password') {
+            $password_lama = $_POST['password_lama'] ?? '';
+            $password_baru = $_POST['password_baru'] ?? '';
+            $konfirmasi = $_POST['konfirmasi_password'] ?? '';
 
-            if (!in_array($file_ext, $allowed_ext)) {
-                $_SESSION['error'] = "Format foto hanya mendukung JPG, JPEG, PNG, atau WEBP!";
-                header("Location: akun.php");
+            if (empty($password_lama) || empty($password_baru) || empty($konfirmasi)) {
+                $_SESSION['error'] = "Semua kolom kata sandi wajib diisi!";
+                header("Location: akun.php#keamanan");
                 exit;
             }
 
-            if ($file_size > 2 * 1024 * 1024) {
-                $_SESSION['error'] = "Ukuran file foto maksimal 2MB!";
-                header("Location: akun.php");
+            if (strlen($password_baru) < 6) {
+                $_SESSION['error'] = "Kata sandi baru minimal 6 karakter!";
+                header("Location: akun.php#keamanan");
                 exit;
             }
 
-            $unique_name = 'user_' . $user_id . '_' . time() . '.' . $file_ext;
-            $upload_dir = __DIR__ . '/assets/uploads/user/';
-            if (!is_dir($upload_dir)) {
-                mkdir($upload_dir, 0777, true);
+            if ($password_baru !== $konfirmasi) {
+                $_SESSION['error'] = "Konfirmasi kata sandi baru tidak cocok!";
+                header("Location: akun.php#keamanan");
+                exit;
             }
 
-            $target_file = $upload_dir . $unique_name;
-            if (move_uploaded_file($file_tmp, $target_file)) {
-                $foto_baru = $unique_name;
+            $q_pass = mysqli_query($conn, "SELECT password FROM users WHERE id = '$user_id' LIMIT 1");
+            $user_db = $q_pass ? mysqli_fetch_assoc($q_pass) : null;
 
-                $q_old = mysqli_query($conn, "SELECT foto_profil FROM users WHERE id = '$user_id'");
-                $old_row = $q_old ? mysqli_fetch_assoc($q_old) : null;
-                if ($old_row && !empty($old_row['foto_profil']) && file_exists($upload_dir . $old_row['foto_profil'])) {
-                    @unlink($upload_dir . $old_row['foto_profil']);
-                }
+            if ($user_db && (password_verify($password_lama, $user_db['password']) || md5($password_lama) === $user_db['password'])) {
+                $hashed_new = password_hash($password_baru, PASSWORD_BCRYPT);
+                $hashed_esc = mysqli_real_escape_string($conn, $hashed_new);
+                mysqli_query($conn, "UPDATE users SET password = '$hashed_esc', updated_at = NOW() WHERE id = '$user_id'");
+                $_SESSION['success'] = "Kata sandi berhasil diubah!";
+                header("Location: akun.php#keamanan");
+                exit;
+            } else {
+                $_SESSION['error'] = "Kata sandi saat ini tidak sesuai!";
+                header("Location: akun.php#keamanan");
+                exit;
             }
         }
 
-        $nama_esc = mysqli_real_escape_string($conn, $nama_lengkap);
-        $telp_esc = mysqli_real_escape_string($conn, $no_telepon);
-        $alamat_esc = mysqli_real_escape_string($conn, $alamat_lengkap);
-
-        if ($foto_baru !== null) {
-            $foto_esc = mysqli_real_escape_string($conn, $foto_baru);
-            mysqli_query($conn, "UPDATE users SET nama_lengkap = '$nama_esc', no_telepon = '$telp_esc', alamat_lengkap = '$alamat_esc', foto_profil = '$foto_esc', updated_at = NOW() WHERE id = '$user_id'");
-        } else {
-            mysqli_query($conn, "UPDATE users SET nama_lengkap = '$nama_esc', no_telepon = '$telp_esc', alamat_lengkap = '$alamat_esc', updated_at = NOW() WHERE id = '$user_id'");
+        if ($aksi === 'selesaikan_pesanan') {
+            $pesanan_id_konfirmasi = (int) ($_POST['pesanan_id'] ?? 0);
+            if ($pesanan_id_konfirmasi > 0) {
+                mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'selesai', updated_at = NOW() WHERE id = '$pesanan_id_konfirmasi' AND user_id = '$user_id'");
+                $_SESSION['success'] = "Terima kasih! Pesanan Anda telah ditandai selesai.";
+            }
+            header("Location: akun.php#pesanan");
+            exit;
         }
+    }
 
-        $_SESSION['nama_lengkap'] = $nama_lengkap;
-        $_SESSION['success'] = "Data profil berhasil diperbarui!";
-        header("Location: akun.php");
+    $user = null;
+    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, role, no_telepon, alamat_lengkap, foto_profil, created_at FROM users WHERE id = '$user_id' LIMIT 1");
+    $user = $q_user ? mysqli_fetch_assoc($q_user) : null;
+
+    if (!$user) {
+        session_destroy();
+        header("Location: auth/login.php");
         exit;
     }
 
-    if ($aksi === 'update_password') {
-        $password_lama = $_POST['password_lama'] ?? '';
-        $password_baru = $_POST['password_baru'] ?? '';
-        $konfirmasi = $_POST['konfirmasi_password'] ?? '';
+    $cart_qty = cart_count($conn);
+    $has_photo = !empty($user['foto_profil']) && file_exists(__DIR__ . '/assets/uploads/user/' . $user['foto_profil']);
+    $initials = strtoupper(substr($user['nama_lengkap'] ?? 'U', 0, 1));
+    $joined_date = !empty($user['created_at']) ? date('d M Y', strtotime($user['created_at'])) : '-';
 
-        if (empty($password_lama) || empty($password_baru) || empty($konfirmasi)) {
-            $_SESSION['error'] = "Semua kolom kata sandi wajib diisi!";
-            header("Location: akun.php#keamanan");
-            exit;
-        }
-
-        if (strlen($password_baru) < 6) {
-            $_SESSION['error'] = "Kata sandi baru minimal 6 karakter!";
-            header("Location: akun.php#keamanan");
-            exit;
-        }
-
-        if ($password_baru !== $konfirmasi) {
-            $_SESSION['error'] = "Konfirmasi kata sandi baru tidak cocok!";
-            header("Location: akun.php#keamanan");
-            exit;
-        }
-
-        $q_pass = mysqli_query($conn, "SELECT password FROM users WHERE id = '$user_id' LIMIT 1");
-        $user_db = $q_pass ? mysqli_fetch_assoc($q_pass) : null;
-
-        if ($user_db && (password_verify($password_lama, $user_db['password']) || md5($password_lama) === $user_db['password'])) {
-            $hashed_new = password_hash($password_baru, PASSWORD_BCRYPT);
-            $hashed_esc = mysqli_real_escape_string($conn, $hashed_new);
-            mysqli_query($conn, "UPDATE users SET password = '$hashed_esc', updated_at = NOW() WHERE id = '$user_id'");
-            $_SESSION['success'] = "Kata sandi berhasil diubah!";
-            header("Location: akun.php#keamanan");
-            exit;
-        } else {
-            $_SESSION['error'] = "Kata sandi saat ini tidak sesuai!";
-            header("Location: akun.php#keamanan");
-            exit;
+    $q_my_orders = mysqli_query($conn, "SELECT p.*, (SELECT COUNT(*) FROM detail_pesanan dp WHERE dp.pesanan_id = p.id) AS total_item FROM pesanan p WHERE p.user_id = '$user_id' ORDER BY p.created_at DESC");
+    $orders = [];
+    if ($q_my_orders) {
+        while ($r_ord = mysqli_fetch_assoc($q_my_orders)) {
+            $orders[] = $r_ord;
         }
     }
-}
-
-$user = null;
-$q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, role, no_telepon, alamat_lengkap, foto_profil, created_at FROM users WHERE id = '$user_id' LIMIT 1");
-$user = $q_user ? mysqli_fetch_assoc($q_user) : null;
-
-if (!$user) {
-    session_destroy();
-    header("Location: auth/login.php");
-    exit;
-}
-
-$cart_qty = cart_count($conn);
-$has_photo = !empty($user['foto_profil']) && file_exists(__DIR__ . '/assets/uploads/user/' . $user['foto_profil']);
-$initials = strtoupper(substr($user['nama_lengkap'] ?? 'U', 0, 1));
-$joined_date = !empty($user['created_at']) ? date('d M Y', strtotime($user['created_at'])) : '-';
+    $total_my_orders = count($orders);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -172,12 +191,6 @@ $joined_date = !empty($user['created_at']) ? date('d M Y', strtotime($user['crea
                     <h5 class="fw-bold text-dark mb-1"><?= htmlspecialchars($user['nama_lengkap']); ?></h5>
                     <p class="text-muted small mb-2"><?= htmlspecialchars($user['email']); ?></p>
 
-                    <div>
-                        <span class="badge <?= ($user['role'] === 'admin') ? 'bg-primary-subtle text-primary border border-primary-subtle' : 'bg-success-subtle text-success border border-success-subtle'; ?> rounded-pill px-3 py-1 fw-semibold small">
-                            <i class="bi <?= ($user['role'] === 'admin') ? 'bi-shield-check' : 'bi-person-check'; ?> me-1"></i><?= ucfirst(htmlspecialchars($user['role'])); ?>
-                        </span>
-                    </div>
-
                     <hr class="my-3 text-muted">
 
                     <div class="text-start small text-muted">
@@ -189,15 +202,22 @@ $joined_date = !empty($user['created_at']) ? date('d M Y', strtotime($user['crea
                             <span><i class="bi bi-telephone me-2 text-success"></i>Telepon:</span>
                             <span class="fw-semibold text-dark"><?= !empty($user['no_telepon']) ? htmlspecialchars($user['no_telepon']) : '-'; ?></span>
                         </div>
-                        <div class="d-flex justify-content-between">
+                        <div class="d-flex justify-content-between mb-2">
                             <span><i class="bi bi-bag-check me-2 text-success"></i>Keranjang:</span>
                             <span class="badge bg-success rounded-pill px-2 py-1"><?= $cart_qty; ?> item</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span><i class="bi bi-receipt me-2 text-success"></i>Pesanan:</span>
+                            <span class="badge bg-success rounded-pill px-2 py-1"><?= $total_my_orders; ?> transaksi</span>
                         </div>
                     </div>
 
                     <hr class="my-3 text-muted">
 
                     <div class="d-grid gap-2">
+                        <a href="#pesanan" class="btn btn-outline-success rounded-pill btn-sm py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">
+                            <i class="bi bi-clock-history"></i><span>Riwayat Pesanan (<?= $total_my_orders; ?>)</span>
+                        </a>
                         <a href="keranjang.php" class="btn btn-outline-success rounded-pill btn-sm py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">
                             <i class="bi bi-bag-fill"></i><span>Lihat Keranjang Belanja</span>
                         </a>
@@ -214,7 +234,68 @@ $joined_date = !empty($user['created_at']) ? date('d M Y', strtotime($user['crea
             </div>
 
             <div class="col-12 col-lg-8">
-                <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5 mb-4">
+                <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 mb-4" id="pesanan">
+                    <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-4">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1"><i class="bi bi-clock-history text-success me-2"></i>Riwayat Pesanan Saya</h5>
+                            <p class="text-muted small mb-0">Daftar transaksi pembelian buku yang pernah Anda lakukan</p>
+                        </div>
+                        <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 fw-semibold"><?= $total_my_orders; ?> Pesanan</span>
+                    </div>
+
+                    <?php if (empty($orders)): ?>
+                        <div class="text-center py-4">
+                            <div class="rounded-circle bg-light text-muted d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 70px; height: 70px;">
+                                <i class="bi bi-receipt" style="font-size: 2rem;"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark mb-1">Belum Ada Riwayat Pesanan</h6>
+                            <p class="text-muted small mb-3">Anda belum pernah membuat pesanan di PustakaKu. Jelajahi katalog buku pilihan kami sekarang!</p>
+                            <a href="katalog.php" class="btn btn-success btn-sm rounded-pill px-4 fw-semibold"><i class="bi bi-grid me-1"></i>Mulai Berbelanja</a>
+                        </div>
+                    <?php else: ?>
+                        <div class="d-flex flex-column gap-3">
+                            <?php foreach ($orders as $ord): ?>
+                                <div class="border rounded-4 p-3 bg-white">
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-2 border-bottom">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="fw-bold text-dark font-monospace small"><?= htmlspecialchars($ord['nomor_pesanan']); ?></span>
+                                            <span class="text-muted" style="font-size: 11px;">&bull; <?= date('d M Y, H:i', strtotime($ord['created_at'])); ?> WIB</span>
+                                        </div>
+                                        <div><?= status_pesanan_badge($ord['status_pesanan']); ?></div>
+                                    </div>
+
+                                    <div class="row align-items-center py-3 g-2">
+                                        <div class="col-12 col-md-7">
+                                            <div class="small text-muted mb-1"><i class="bi bi-book me-1 text-success"></i><strong><?= (int) $ord['total_item']; ?></strong> jenis buku dipesan</div>
+                                            <div class="small text-muted mb-1"><i class="bi bi-wallet2 me-1 text-success"></i>Metode: <?= htmlspecialchars($ord['metode_pembayaran']); ?></div>
+                                            <?php if (!empty($ord['nomor_resi'])): ?>
+                                                <div class="small text-dark mt-1"><i class="bi bi-truck me-1 text-primary"></i>No. Resi: <strong class="font-monospace text-primary"><?= htmlspecialchars($ord['nomor_resi']); ?></strong></div>
+                                            <?php endif; ?>
+                                        </div>
+
+                                        <div class="col-12 col-md-5 text-md-end">
+                                            <div class="small text-muted">Total Pembayaran</div>
+                                            <div class="fw-bold text-success fs-5"><?= formatRupiah($ord['total_bayar']); ?></div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top">
+                                        <a href="pesanan_sukses.php?id=<?= (int)$ord['id']; ?>" class="btn btn-outline-success btn-sm rounded-pill px-3 fw-semibold"><i class="bi bi-file-earmark-text me-1"></i>Lihat Detail & Invoice</a>
+                                        <?php if ($ord['status_pesanan'] === 'dikirim'): ?>
+                                            <form action="akun.php" method="POST" class="m-0" onsubmit="return confirm('Apakah pesanan ini sudah Anda terima dengan baik?');">
+                                                <input type="hidden" name="aksi" value="selesaikan_pesanan">
+                                                <input type="hidden" name="pesanan_id" value="<?= (int)$ord['id']; ?>">
+                                                <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold"><i class="bi bi-check2-circle me-1"></i>Konfirmasi Pesanan Diterima</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 mb-4">
                     <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-4">
                         <div>
                             <h5 class="fw-bold text-dark mb-1"><i class="bi bi-person-lines-fill text-success me-2"></i>Perbarui Data Profil</h5>
@@ -265,7 +346,7 @@ $joined_date = !empty($user['created_at']) ? date('d M Y', strtotime($user['crea
                     </form>
                 </div>
 
-                <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5" id="keamanan">
+                <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4" id="keamanan">
                     <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-4">
                         <div>
                             <h5 class="fw-bold text-dark mb-1"><i class="bi bi-shield-lock-fill text-success me-2"></i>Ganti Kata Sandi</h5>
@@ -308,4 +389,3 @@ $joined_date = !empty($user['created_at']) ? date('d M Y', strtotime($user['crea
     <?php include(__DIR__ . '/layouts/footer.php'); ?>
 </body>
 </html>
-
