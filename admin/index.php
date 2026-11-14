@@ -23,9 +23,6 @@
     $q_pengguna = mysqli_query($conn, "SELECT COUNT(*) AS total FROM users WHERE role = 'pelanggan'");
     $row_pengguna = mysqli_fetch_assoc($q_pengguna);
     $total_pengguna = $row_pengguna['total'] ?? 0;
-
-    $success = $_SESSION['success'] ?? '';
-    unset($_SESSION['success']);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -49,14 +46,6 @@
             ?>
 
             <main class="p-3 p-md-4">
-                <?php if (!empty($success)): ?>
-                    <div class="alert alert-info alert-dismissible fade show d-flex align-items-center py-2 px-3 small" role="alert">
-                        <i class="bi bi-check-circle-fill me-2 flex-shrink-0"></i>
-                        <div><?= htmlspecialchars($success); ?></div>
-                        <button type="button" class="btn-close ms-auto p-2 mt-1" style="font-size: 13px;" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
-
                 <div class="admin-banner bg-success mb-4">
                     <div class="row align-items-center">
                         <div class="col-lg-8">

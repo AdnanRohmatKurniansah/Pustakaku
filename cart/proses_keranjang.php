@@ -1,81 +1,74 @@
 <?php
-
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-function cart_user_id(): int {
+function cart_user_id() {
     return (int) ($_SESSION['user_id'] ?? 0);
 }
 
-/** Isi keranjang: [id_buku => jumlah] */
-function cart_get($conn): array {
+function cart_get($conn) {
     $uid = cart_user_id();
     if ($uid <= 0) {
-        return $_SESSION['cart'] ?? [];
+        return [];
     }
     $cart = [];
-    $stmt = mysqli_prepare($conn, "SELECT buku_id, jumlah FROM keranjang WHERE user_id = ?");
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, 'i', $uid);
-        mysqli_stmt_execute($stmt);
-        $res = mysqli_stmt_get_result($stmt);
-        while ($res && ($r = mysqli_fetch_assoc($res))) {
-            $cart[(int) $r['buku_id']] = (int) $r['jumlah'];
+    $res = mysqli_query($conn, "SELECT buku_id, jumlah FROM keranjang WHERE user_id = '$uid'");
+    if ($res) {
+        while ($row = mysqli_fetch_assoc($res)) {
+            $cart[(int) $row['buku_id']] = (int) $row['jumlah'];
         }
     }
     return $cart;
 }
 
-function cart_count($conn): int {
-    return (int) array_sum(cart_get($conn));
+function cart_count($conn) {
+    $cart = cart_get($conn);
+    return (int) array_sum($cart);
 }
 
-/** Simpan jumlah satu buku. Jumlah <= 0 berarti hapus. */
-function cart_store($conn, int $id, int $qty): void {
+function cart_store($conn, $id, $qty) {
     $uid = cart_user_id();
-
     if ($uid <= 0) {
-        $cart = $_SESSION['cart'] ?? [];
-        if ($qty <= 0) unset($cart[$id]); else $cart[$id] = $qty;
-        $_SESSION['cart'] = $cart;
+        return;
+    }
+    $id = (int) $id;
+    $qty = (int) $qty;
+    if ($id <= 0) {
         return;
     }
 
     if ($qty <= 0) {
-        $stmt = mysqli_prepare($conn, "DELETE FROM keranjang WHERE user_id = ? AND buku_id = ?");
-        if ($stmt) {
-            mysqli_stmt_bind_param($stmt, 'ii', $uid, $id);
-            mysqli_stmt_execute($stmt);
-        }
+        mysqli_query($conn, "DELETE FROM keranjang WHERE user_id = '$uid' AND buku_id = '$id'");
         return;
     }
 
-    $stmt = mysqli_prepare($conn,
-        "INSERT INTO keranjang (user_id, buku_id, jumlah) VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE jumlah = VALUES(jumlah)");
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, 'iii', $uid, $id, $qty);
-        mysqli_stmt_execute($stmt);
+    $cek = mysqli_query($conn, "SELECT id FROM keranjang WHERE user_id = '$uid' AND buku_id = '$id'");
+    if ($cek && mysqli_num_rows($cek) > 0) {
+        mysqli_query($conn, "UPDATE keranjang SET jumlah = '$qty' WHERE user_id = '$uid' AND buku_id = '$id'");
+    } else {
+        mysqli_query($conn, "INSERT INTO keranjang (user_id, buku_id, jumlah) VALUES ('$uid', '$id', '$qty')");
     }
 }
 
-/** Tambah buku ke keranjang. Mengembalikan ['ok' => bool, 'message' => string]. */
-function cart_add($conn, int $id, int $qty = 1): array {
-    $qty = max(1, $qty);
+function cart_add($conn, $id, $qty = 1) {
+    $uid = cart_user_id();
+    if ($uid <= 0) {
+        return ['ok' => false, 'login_required' => true, 'message' => 'Silakan masuk ke akun Anda terlebih dahulu untuk belanja.'];
+    }
+
+    if (($_SESSION['role'] ?? '') === 'admin') {
+        return ['ok' => false, 'message' => 'Akun admin tidak dapat berbelanja atau menambahkan produk ke keranjang.'];
+    }
+
+    $id = (int) $id;
+    $qty = max(1, (int) $qty);
     if ($id <= 0) {
         return ['ok' => false, 'message' => 'Produk tidak valid.'];
     }
 
-    $stmt = mysqli_prepare($conn, "SELECT judul, stok FROM buku WHERE id = ?");
-    if (!$stmt) {
-        return ['ok' => false, 'message' => 'Terjadi kesalahan pada server.'];
-    }
-    mysqli_stmt_bind_param($stmt, 'i', $id);
-    mysqli_stmt_execute($stmt);
-    $res = mysqli_stmt_get_result($stmt);
+    $res = mysqli_query($conn, "SELECT judul, stok FROM buku WHERE id = '$id'");
     $buku = $res ? mysqli_fetch_assoc($res) : null;
-
     if (!$buku) {
         return ['ok' => false, 'message' => 'Produk tidak ditemukan.'];
     }
@@ -85,8 +78,8 @@ function cart_add($conn, int $id, int $qty = 1): array {
         return ['ok' => false, 'message' => 'Maaf, stok produk ini habis.'];
     }
 
-    $cart  = cart_get($conn);
-    $baru  = ($cart[$id] ?? 0) + $qty;
+    $cart = cart_get($conn);
+    $baru = ($cart[$id] ?? 0) + $qty;
 
     if ($baru > $stok) {
         cart_store($conn, $id, $stok);
@@ -97,43 +90,36 @@ function cart_add($conn, int $id, int $qty = 1): array {
     return ['ok' => true, 'message' => '"' . $buku['judul'] . '" ditambahkan ke keranjang.'];
 }
 
-/** Ubah jumlah (hanya untuk buku yang sudah ada di keranjang). */
-function cart_set($conn, int $id, int $qty): void {
+function cart_set($conn, $id, $qty) {
     $cart = cart_get($conn);
+    $id = (int) $id;
+    $qty = (int) $qty;
     if ($qty <= 0 || isset($cart[$id])) {
         cart_store($conn, $id, $qty);
     }
 }
 
-function cart_remove($conn, int $id): void {
-    cart_store($conn, $id, 0);
+function cart_remove($conn, $id) {
+    cart_store($conn, (int) $id, 0);
 }
 
-function cart_clear($conn): void {
+function cart_clear($conn) {
     $uid = cart_user_id();
-    if ($uid <= 0) {
-        $_SESSION['cart'] = [];
-        return;
-    }
-    $stmt = mysqli_prepare($conn, "DELETE FROM keranjang WHERE user_id = ?");
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, 'i', $uid);
-        mysqli_stmt_execute($stmt);
+    if ($uid > 0) {
+        mysqli_query($conn, "DELETE FROM keranjang WHERE user_id = '$uid'");
     }
 }
 
-/**
- * Detail isi keranjang. Harga dihitung dari database dan jumlah
- * disesuaikan dengan stok terkini (item yang stoknya habis dihapus).
- */
-function cart_items($conn): array {
+function cart_items($conn) {
     $cart = cart_get($conn);
-    if (!$cart) {
+    if (empty($cart)) {
         return ['items' => [], 'total' => 0.0, 'jumlah' => 0];
     }
 
-    $ids = implode(',', array_map('intval', array_keys($cart)));
-    $res = mysqli_query($conn, "SELECT id, judul, penulis, penerbit, berat_gram, harga, harga_diskon, stok, gambar FROM buku WHERE id IN ($ids)");
+    $id_keys = array_values(array_map('intval', array_keys($cart)));
+    $id_list = implode(',', $id_keys);
+
+    $res = mysqli_query($conn, "SELECT id, judul, penulis, penerbit, berat_gram, harga, harga_diskon, stok, gambar FROM buku WHERE id IN ($id_list)");
 
     $items = [];
     $total = 0.0;
@@ -142,15 +128,17 @@ function cart_items($conn): array {
 
     if ($res) {
         while ($r = mysqli_fetch_assoc($res)) {
-            $id   = (int) $r['id'];
+            $id = (int) $r['id'];
             $stok = (int) $r['stok'];
-            if ($stok <= 0) continue;
+            if ($stok <= 0) {
+                continue;
+            }
 
             $ditemukan[$id] = true;
-            $qty    = min((int) $cart[$id], $stok);
-            $harga  = (float) $r['harga'];
+            $qty = min((int) $cart[$id], $stok);
+            $harga = (float) $r['harga'];
             $diskon = (float) $r['harga_diskon'];
-            $ada    = $diskon > 0 && $diskon < $harga;
+            $ada = $diskon > 0 && $diskon < $harga;
             $satuan = $ada ? $diskon : $harga;
 
             if ($qty !== (int) $cart[$id]) {
@@ -158,51 +146,33 @@ function cart_items($conn): array {
             }
 
             $items[] = [
-                'id'       => $id,
-                'judul'    => $r['judul'],
-                'penulis'  => $r['penulis'],
+                'id' => $id,
+                'judul' => $r['judul'],
+                'penulis' => $r['penulis'],
                 'penerbit' => $r['penerbit'],
-                'berat'    => (int) $r['berat_gram'],
-                'gambar'   => 'assets/uploads/buku/' . $r['gambar'],
-                'harga'    => $harga,
-                'diskon'   => $ada ? $diskon : null,
-                'satuan'   => $satuan,
-                'qty'      => $qty,
-                'stok'     => $stok,
-                'subtotal' => $satuan * $qty,
+                'berat' => (int) $r['berat_gram'],
+                'gambar' => 'assets/uploads/buku/' . $r['gambar'],
+                'harga' => $harga,
+                'diskon' => $ada ? $diskon : null,
+                'satuan' => $satuan,
+                'qty' => $qty,
+                'stok' => $stok,
+                'subtotal' => $satuan * $qty
             ];
-            $total  += $satuan * $qty;
+            $total += $satuan * $qty;
             $jumlah += $qty;
         }
     }
 
-    // Buang item yang bukunya sudah dihapus atau stoknya habis
     foreach ($cart as $id => $qty) {
-        if (!isset($ditemukan[$id])) cart_store($conn, (int) $id, 0);
+        if (!isset($ditemukan[$id])) {
+            cart_store($conn, (int) $id, 0);
+        }
     }
 
     return ['items' => $items, 'total' => $total, 'jumlah' => $jumlah];
 }
 
-/**
- * Panggil SEKALI setelah login berhasil: memindahkan keranjang tamu
- * (session) ke database dan menjumlahkannya dengan isi yang sudah ada.
- */
-function cart_merge_session($conn, int $user_id): void {
-    $tamu = $_SESSION['cart'] ?? [];
-    if ($user_id <= 0 || !$tamu) return;
-
-    $stmt = mysqli_prepare($conn,
-        "INSERT INTO keranjang (user_id, buku_id, jumlah) VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE jumlah = jumlah + VALUES(jumlah)");
-    if ($stmt) {
-        foreach ($tamu as $buku_id => $qty) {
-            $b = (int) $buku_id;
-            $q = (int) $qty;
-            if ($b <= 0 || $q <= 0) continue;
-            mysqli_stmt_bind_param($stmt, 'iii', $user_id, $b, $q);
-            mysqli_stmt_execute($stmt);
-        }
-    }
-    $_SESSION['cart'] = [];
+function cart_merge_session($conn, $user_id) {
+    return;
 }

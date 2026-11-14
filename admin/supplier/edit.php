@@ -17,8 +17,6 @@
         exit;
     }
     $supplier = mysqli_fetch_assoc($query);
-    $error = $_SESSION['error'] ?? '';
-    unset($_SESSION['error']);
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -52,14 +50,6 @@
                         </a>
                     </div>
                 </div>
-
-                <?php if (!empty($error)): ?>
-                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center" role="alert">
-                        <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i>
-                        <div><?= htmlspecialchars($error); ?></div>
-                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                <?php endif; ?>
 
                 <div class="card p-4">
                     <form action="proses_edit.php" method="POST" enctype="multipart/form-data">

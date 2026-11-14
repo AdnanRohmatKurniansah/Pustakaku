@@ -9,4 +9,6 @@
     if (!$conn) {
         die("Koneksi gagal: " . mysqli_connect_error());
     }
+
+    require_once __DIR__ . '/helper.php';
 ?>

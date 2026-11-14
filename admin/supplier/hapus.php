@@ -16,21 +16,12 @@
         exit;
     }
 
-    $stmt = mysqli_prepare($conn,"DELETE FROM supplier WHERE id = ?");
-
-    mysqli_stmt_bind_param($stmt, "i", $id);
-
-    if (mysqli_stmt_execute($stmt)) {
-        if (mysqli_stmt_affected_rows($stmt) > 0) {
-            $_SESSION['success'] = "Supplier berhasil dihapus!";
-        } else {
-            $_SESSION['error'] = "Supplier tidak ditemukan!";
-        }
+    $del = mysqli_query($conn, "DELETE FROM supplier WHERE id = '$id'");
+    if ($del && mysqli_affected_rows($conn) > 0) {
+        $_SESSION['success'] = "Supplier berhasil dihapus!";
     } else {
-        $_SESSION['error'] = "Gagal menghapus supplier!";
+        $_SESSION['error'] = "Supplier tidak ditemukan atau gagal dihapus!";
     }
-
-    mysqli_stmt_close($stmt);
 
     header("Location: index.php");
     exit;

@@ -1,16 +1,16 @@
 <?php
-$f_kategori = [];
-if (isset($conn) && $conn) {
-    $res_fk = mysqli_query($conn, "SELECT id, nama_kategori FROM kategori ORDER BY id ASC");
-    if ($res_fk) {
-        while ($row = mysqli_fetch_assoc($res_fk)) {
-            $f_kategori[] = $row;
+    $f_kategori = [];
+    if (isset($conn) && $conn) {
+        $res_fk = mysqli_query($conn, "SELECT id, nama_kategori FROM kategori ORDER BY id ASC");
+        if ($res_fk) {
+            while ($row = mysqli_fetch_assoc($res_fk)) {
+                $f_kategori[] = $row;
+            }
         }
     }
-}
-$half_kat = ceil(count($f_kategori) / 2);
-$footer_col1 = array_slice($f_kategori, 0, $half_kat);
-$footer_col2 = array_slice($f_kategori, $half_kat);
+    $half_kat = ceil(count($f_kategori) / 2);
+    $footer_col1 = array_slice($f_kategori, 0, $half_kat);
+    $footer_col2 = array_slice($f_kategori, $half_kat);
 ?>
 
 <footer id="footer" class="footer-wrap pt-5 pb-4 mt-5">
@@ -63,5 +63,6 @@ $footer_col2 = array_slice($f_kategori, $half_kat);
         </div>
     </div>
 </footer>
+<script src="assets/js/cart.js"></script>
 
 
