@@ -69,11 +69,7 @@
                             <div class="col-md-12">
                                 <div class="mb-4">
                                     <label class="form-label small fw-semibold text-secondary d-block">Profile Saat Ini</label>
-                                    <?php if (!empty($user['foto_profil']) && file_exists('../../assets/uploads/user/' . $user['foto_profil'])): ?>
-                                        <img src="../../assets/uploads/user/<?= htmlspecialchars($user['foto_profil']); ?>" alt="Preview" class="rounded-3 border mb-2 object-fit-cover" style="width: 80px; height: 80px;">
-                                    <?php else: ?>
-                                        <div class="text-muted small mb-2 fst-italic">Tidak ada profile yg tersimpan.</div>
-                                    <?php endif; ?>
+                                    <img src="<?= (!empty($user['foto_profil']) && file_exists('../../assets/uploads/user/' . $user['foto_profil'])) ? ('../../assets/uploads/user/' . htmlspecialchars($user['foto_profil'])) : '../../assets/images/placeholder.png'; ?>" alt="Preview" class="rounded-3 border mb-2 object-fit-cover" style="width: 80px; height: 80px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
 
                                     <input type="file" class="form-control" id="foto_profil" name="foto_profil" accept="image/*">
                                     <div class="form-text small">Biarkan kosong jika tidak ingin mengubah profile anda.</div>

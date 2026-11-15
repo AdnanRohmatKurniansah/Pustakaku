@@ -122,11 +122,7 @@
 
                             <div class="col-12">
                                 <label class="form-label small fw-semibold text-secondary d-block">Sampul Buku Saat Ini</label>
-                                <?php if (!empty($buku['gambar']) && file_exists('../../assets/uploads/buku/' . $buku['gambar'])): ?>
-                                    <img src="../../assets/uploads/buku/<?= htmlspecialchars($buku['gambar']); ?>" alt="Sampul" class="rounded-2 border mb-2 object-fit-cover" style="width: 70px; height: 95px;">
-                                <?php else: ?>
-                                    <div class="text-muted small mb-2 fst-italic">Tidak ada foto sampul tersimpan.</div>
-                                <?php endif; ?>
+                                <img src="<?= (!empty($buku['gambar']) && file_exists('../../assets/uploads/buku/' . $buku['gambar'])) ? ('../../assets/uploads/buku/' . htmlspecialchars($buku['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="Sampul" class="rounded-2 border mb-2 object-fit-cover" style="width: 70px; height: 95px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
 
                                 <input type="file" class="form-control" id="gambar" name="gambar" accept="image/*">
                                 <div class="form-text small">Biarkan kosong jika tidak ingin mengubah foto sampul buku.</div>

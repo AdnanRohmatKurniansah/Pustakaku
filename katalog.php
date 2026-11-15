@@ -85,7 +85,7 @@
                 'diskon'     => $ada_diskon ? $diskon : null,
                 'persen'     => $ada_diskon ? round((($harga - $diskon) / $harga) * 100) : 0,
                 'stok'       => (int)$row['stok'],
-                'gambar'     => 'assets/uploads/buku/' . $row['gambar']
+                'gambar'     => (!empty($row['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $row['gambar'])) ? ('assets/uploads/buku/' . $row['gambar']) : 'assets/images/placeholder.png'
             ];
         }
     }
@@ -258,7 +258,7 @@
                                             <span class="badge bg-danger badge-discount shadow-sm">-<?= $b['persen']; ?>%</span>
                                         <?php endif; ?>
                                         <a href="detail_buku.php?id=<?= (int)$b['id']; ?>" class="d-block text-center">
-                                            <img src="<?= htmlspecialchars($b['gambar']); ?>" alt="<?= htmlspecialchars($b['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/200x260/eaf6ef/198754?text=Buku';">
+                                            <img src="<?= htmlspecialchars($b['gambar']); ?>" alt="<?= htmlspecialchars($b['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                                         </a>
                                         <span class="stock-tag <?= ($habis || $tipis) ? 'low' : ''; ?>">
                                             <?= $habis ? 'Stok Habis' : ($tipis ? 'Sisa ' . $b['stok'] : 'Stok Tersedia'); ?>

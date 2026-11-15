@@ -274,7 +274,7 @@
                         <div class="checkout-items-list mb-3" style="max-height: 280px; overflow-y: auto;">
                             <?php foreach ($items as $it): ?>
                                 <div class="d-flex align-items-center gap-3 py-2 border-bottom">
-                                    <img src="<?= htmlspecialchars($it['gambar']); ?>" alt="<?= htmlspecialchars($it['judul']); ?>" class="rounded-3 border object-fit-cover flex-shrink-0" style="width: 48px; height: 64px;" onerror="this.onerror=null;this.src='https://placehold.co/160x210/eaf6ef/198754?text=Buku';">
+                                    <img src="<?= htmlspecialchars($it['gambar']); ?>" alt="<?= htmlspecialchars($it['judul']); ?>" class="rounded-3 border object-fit-cover flex-shrink-0" style="width: 48px; height: 64px;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                                     <div class="min-w-0 flex-grow-1">
                                         <div class="fw-semibold text-dark text-truncate small" title="<?= htmlspecialchars($it['judul']); ?>"><?= htmlspecialchars($it['judul']); ?></div>
                                         <div class="text-muted" style="font-size: 11px;"><?= (int) $it['qty']; ?> x <?= formatRupiah($it['satuan']); ?></div>

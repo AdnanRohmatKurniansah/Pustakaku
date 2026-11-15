@@ -64,13 +64,7 @@
                                         <tr>
                                             <td class="fw-semibold text-muted"><?= $no++; ?></td>
                                             <td>
-                                                <?php if (!empty($row['gambar']) && file_exists('../../assets/uploads/kategori/' . $row['gambar'])): ?>
-                                                    <img src="../../assets/uploads/kategori/<?= htmlspecialchars($row['gambar']); ?>" alt="<?= htmlspecialchars($row['nama_kategori']); ?>" class="rounded-3 object-fit-cover border" style="width: 54px; height: 54px;">
-                                                <?php else: ?>
-                                                    <div class="bg-light rounded-3 d-flex align-items-center justify-content-center text-muted border" style="width: 54px; height: 54px;">
-                                                        <i class="bi bi-image fs-5"></i>
-                                                    </div>
-                                                <?php endif; ?>
+                                                <img src="<?= (!empty($row['gambar']) && file_exists('../../assets/uploads/kategori/' . $row['gambar'])) ? ('../../assets/uploads/kategori/' . htmlspecialchars($row['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($row['nama_kategori']); ?>" class="rounded-3 object-fit-cover border" style="width: 54px; height: 54px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
                                             </td>
                                             <td>
                                                 <div class="fw-bold text-dark"><?= htmlspecialchars($row['nama_kategori']); ?></div>

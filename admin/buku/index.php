@@ -66,13 +66,7 @@
                                         <tr>
                                             <td class="fw-semibold text-muted"><?= $no++; ?></td>
                                             <td>
-                                                <?php if (!empty($row['gambar']) && file_exists('../../assets/uploads/buku/' . $row['gambar'])): ?>
-                                                    <img src="../../assets/uploads/buku/<?= htmlspecialchars($row['gambar']); ?>" alt="<?= htmlspecialchars($row['judul']); ?>" class="rounded-2 object-fit-cover border" style="width: 48px; height: 64px;">
-                                                <?php else: ?>
-                                                    <div class="bg-light rounded-2 d-flex align-items-center justify-content-center text-muted border" style="width: 48px; height: 64px;">
-                                                        <i class="bi bi-book fs-4"></i>
-                                                    </div>
-                                                <?php endif; ?>
+                                                <img src="<?= (!empty($row['gambar']) && file_exists('../../assets/uploads/buku/' . $row['gambar'])) ? ('../../assets/uploads/buku/' . htmlspecialchars($row['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($row['judul']); ?>" class="rounded-2 object-fit-cover border" style="width: 48px; height: 64px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
                                             </td>
                                             <td>
                                                 <div class="fw-bold text-dark"><?= htmlspecialchars($row['judul']); ?></div>
