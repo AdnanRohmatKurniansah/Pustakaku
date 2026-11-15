@@ -6,10 +6,10 @@
 
 ## 👥 Profil Kelompok
 
-| No | Nama Anggota | NIM | Peran |
-|:--:|:-------------|:------------------------------|:------|
-| 1  | **Rizky Prasetyo Landung Nugroho** | **123250078** | Frontend Developer & Database Designer |
-| 2  | **Adnan Rohmat Kurniansah** | **123250085** | Fullstack Developer & Backend Architect |
+| No | Nama Anggota | NIM |
+|:--:|:-------------|:------------------------------|
+| 1  | **Rizky Prasetyo Landung Nugroho** | **123250078** |
+| 2  | **Adnan Rohmat Kurniansah** | **123250085** |
 
 ---
 
@@ -17,7 +17,7 @@
 
 * **Back-End:** PHP 8.x (Native Procedural & OOP Database Layer)
 * **Database:** MySQL / MariaDB (Engine InnoDB, Relational Foreign Keys, Cascade/Restrict Integrity)
-* **Front-End:** HTML5, CSS3 Modern, Vanilla JavaScript (ES6+, Fetch API AJAX)
+* **Front-End:** HTML5, CSS3 Modern, Vanilla JavaScript 
 * **CSS & Icon Framework:** Bootstrap 5.3, Bootstrap Icons 1.11, Font Awesome 6
 * **Web Server & Environment:** Apache / XAMPP on Linux & Windows
 
