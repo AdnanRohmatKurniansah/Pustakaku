@@ -125,7 +125,7 @@
 
                             <a href="#" class="cart-item-img">
                                 <?php if ($ada_diskon): ?><span class="badge bg-danger">-<?= $persen; ?>%</span><?php endif; ?>
-                                <img src="<?= htmlspecialchars($it['gambar']); ?>" alt="<?= htmlspecialchars($it['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='https://placehold.co/160x210/eaf6ef/198754?text=Buku';">
+                                <img src="<?= htmlspecialchars($it['gambar']); ?>" alt="<?= htmlspecialchars($it['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                             </a>
 
                             <div class="cart-item-body">

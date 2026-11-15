@@ -182,7 +182,7 @@
                 <div class="card border-0 shadow-sm rounded-4 p-4 text-center mb-4">
                     <div class="position-relative d-inline-block mx-auto mb-3">
                         <?php if ($has_photo): ?>
-                            <img src="assets/uploads/user/<?= htmlspecialchars($user['foto_profil']); ?>" alt="<?= htmlspecialchars($user['nama_lengkap']); ?>" class="rounded-circle object-fit-cover shadow-sm border border-3 border-success-subtle" style="width: 100px; height: 100px;">
+                            <img src="assets/uploads/user/<?= htmlspecialchars($user['foto_profil']); ?>" alt="<?= htmlspecialchars($user['nama_lengkap']); ?>" class="rounded-circle object-fit-cover shadow-sm border border-3 border-success-subtle" style="width: 100px; height: 100px;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                         <?php else: ?>
                             <div class="rounded-circle bg-success text-white fw-bold d-flex align-items-center justify-content-center shadow-sm border border-3 border-success-subtle" style="width: 100px; height: 100px; font-size: 2.2rem;"><?= $initials; ?></div>
                         <?php endif; ?>

@@ -78,13 +78,7 @@
                                             </td>
                                             <td>
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <?php if (!empty($row['gambar']) && file_exists('../../assets/uploads/buku/' . $row['gambar'])): ?>
-                                                        <img src="../../assets/uploads/buku/<?= htmlspecialchars($row['gambar']); ?>" alt="Sampul" class="rounded object-fit-cover border" style="width: 38px; height: 50px;">
-                                                    <?php else: ?>
-                                                        <div class="bg-light rounded d-flex align-items-center justify-content-center text-muted border" style="width: 38px; height: 50px;">
-                                                            <i class="bi bi-book"></i>
-                                                        </div>
-                                                    <?php endif; ?>
+                                                    <img src="<?= (!empty($row['gambar']) && file_exists('../../assets/uploads/buku/' . $row['gambar'])) ? ('../../assets/uploads/buku/' . htmlspecialchars($row['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="Sampul" class="rounded object-fit-cover border" style="width: 38px; height: 50px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
                                                     <div>
                                                         <div class="fw-bold text-dark small"><?= htmlspecialchars($row['judul'] ?? 'Buku Telah Dihapus'); ?></div>
                                                         <?php if (!empty($row['isbn'])): ?>

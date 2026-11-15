@@ -158,13 +158,7 @@
 
                             <?php if (!empty($restok['judul'])): ?>
                                 <div class="text-center mb-3">
-                                    <?php if (!empty($restok['gambar']) && file_exists('../../assets/uploads/buku/' . $restok['gambar'])): ?>
-                                        <img src="../../assets/uploads/buku/<?= htmlspecialchars($restok['gambar']); ?>" alt="Sampul Buku" class="rounded-3 border shadow-sm object-fit-cover" style="width: 120px; height: 160px;">
-                                    <?php else: ?>
-                                        <div class="bg-light rounded-3 d-inline-flex align-items-center justify-content-center text-muted border" style="width: 120px; height: 160px;">
-                                            <i class="bi bi-book fs-1"></i>
-                                        </div>
-                                    <?php endif; ?>
+                                    <img src="<?= (!empty($restok['gambar']) && file_exists('../../assets/uploads/buku/' . $restok['gambar'])) ? ('../../assets/uploads/buku/' . htmlspecialchars($restok['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="Sampul Buku" class="rounded-3 border shadow-sm object-fit-cover" style="width: 120px; height: 160px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
                                     <h5 class="fw-bold text-dark mt-3 mb-1"><?= htmlspecialchars($restok['judul']); ?></h5>
                                     <?php if (!empty($restok['nama_kategori'])): ?>
                                         <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">

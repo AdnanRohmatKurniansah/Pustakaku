@@ -17,10 +17,9 @@
     if ($cat_res) {
         while ($row = mysqli_fetch_assoc($cat_res)) {
             $kategori_display[] = [
-                'id' => $row['id'],
-                'nama' => $row['nama_kategori'],
+                'id'     => $row['id'],
+                'nama'   => $row['nama_kategori'],
                 'gambar' => $row['gambar'],
-                'filter' => $kategori_filters[$row['id']] ?? 'all'
             ];
         }
     }
@@ -32,6 +31,7 @@
             $harga_normal = (float)$row['harga'];
             $harga_diskon = (float)$row['harga_diskon'];
             $disc_pct = ($harga_normal > 0) ? round((($harga_normal - $harga_diskon) / $harga_normal) * 100) : 0;
+            $fs_img = (!empty($row['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $row['gambar'])) ? ('assets/uploads/buku/' . $row['gambar']) : 'assets/images/placeholder.png';
             $flash_sale_items[] = [
                 'id' => $row['id'],
                 'judul' => $row['judul'],
@@ -41,34 +41,33 @@
                 'harga_coret' => $harga_normal,
                 'diskon' => '-' . $disc_pct . '%',
                 'stok' => (int)$row['stok'],
-                'gambar' => 'assets/uploads/buku/' . $row['gambar']
+                'gambar' => $fs_img
             ];
         }
     }
 
+    $bb_kat = (int)($_GET['kategori'] ?? 0);
+
     $buku_baru = [];
-    $bb_cat_filter = [
-        1 => 'Fiksi',
-        2 => 'Non-Fiksi',
-        3 => 'Pengembangan',
-        4 => 'all',
-        5 => 'all',
-        6 => 'all',
-        7 => 'atk',
-        8 => 'atk'
-    ];
-    $bb_res = mysqli_query($conn, "SELECT b.id, b.judul, b.penulis, b.harga, b.harga_diskon, b.gambar, b.kategori_id, k.nama_kategori FROM buku b JOIN kategori k ON b.kategori_id = k.id WHERE b.kategori_id != 8 ORDER BY b.id DESC LIMIT 4");
+    $sql_bb = "SELECT b.id, b.judul, b.penulis, b.harga, b.harga_diskon, b.gambar, b.kategori_id, k.nama_kategori
+               FROM buku b
+               JOIN kategori k ON b.kategori_id = k.id
+               ORDER BY b.id DESC
+               LIMIT 8";
+
+    $bb_res = mysqli_query($conn, $sql_bb);
     if ($bb_res) {
         while ($row = mysqli_fetch_assoc($bb_res)) {
+            $bb_img = (!empty($row['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $row['gambar'])) ? ('assets/uploads/buku/' . $row['gambar']) : 'assets/images/placeholder.png';
             $buku_baru[] = [
                 'id' => $row['id'],
-                'category' => $bb_cat_filter[$row['kategori_id']] ?? 'all',
+                'kategori_id' => (int)$row['kategori_id'],
                 'kategori' => $row['nama_kategori'],
                 'judul' => $row['judul'],
                 'penulis' => $row['penulis'],
                 'harga' => (float)$row['harga'],
                 'harga_diskon' => !empty($row['harga_diskon']) ? (float)$row['harga_diskon'] : null,
-                'gambar' => 'assets/uploads/buku/' . $row['gambar']
+                'gambar' => $bb_img
             ];
         }
     }
@@ -110,7 +109,7 @@
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-5 text-center hero-book-wrap">
-                                        <div class="hero-book-frame"><img src="assets/images/banner/laut_bercerita.jpg" alt="Laut Bercerita" class="hero-book-img img-fluid"></div>
+                                        <div class="hero-book-frame"><img src="assets/images/banner/laut_bercerita.jpg" alt="Laut Bercerita" class="hero-book-img img-fluid" onerror="this.onerror=null;this.src='assets/images/placeholder.png';"></div>
                                     </div>
                                 </div>
                             </div>
@@ -129,7 +128,7 @@
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-5 text-center hero-book-wrap">
-                                        <div class="hero-book-frame"><img src="assets/images/banner/atomic_habits.jpg" alt="Atomic Habits" class="hero-book-img img-fluid"></div>
+                                        <div class="hero-book-frame"><img src="assets/images/banner/atomic_habits.jpg" alt="Atomic Habits" class="hero-book-img img-fluid" onerror="this.onerror=null;this.src='assets/images/placeholder.png';"></div>
                                     </div>
                                 </div>
                             </div>
@@ -148,7 +147,7 @@
                                         </div>
                                     </div>
                                     <div class="col-12 col-sm-5 text-center hero-book-wrap">
-                                        <div class="hero-book-frame"><img src="assets/images/banner/filosofi_teras.jpg" alt="Filosofi Teras" class="hero-book-img img-fluid"></div>
+                                        <div class="hero-book-frame"><img src="assets/images/banner/filosofi_teras.jpg" alt="Filosofi Teras" class="hero-book-img img-fluid" onerror="this.onerror=null;this.src='assets/images/placeholder.png';"></div>
                                     </div>
                                 </div>
                             </div>
@@ -256,14 +255,14 @@
                     <span class="text-success fw-bold text-uppercase small tracking-wide" style="font-size: 0.75rem;">Eksplorasi Katalog</span>
                     <h3 class="fw-bold text-dark mb-0">Kategori Populer Pilihan</h3>
                 </div>
-                <a href="#kategori" class="text-success fw-semibold text-decoration-none small d-flex align-items-center gap-1"><span>Semua Kategori</span><i class="bi bi-chevron-right" style="font-size: 0.8rem;"></i></a>
+                <a href="katalog.php" class="text-success fw-semibold text-decoration-none small d-flex align-items-center gap-1"><span>Semua Kategori</span><i class="bi bi-chevron-right" style="font-size: 0.8rem;"></i></a>
             </div>
 
             <div class="row row-cols-2 row-cols-sm-4 row-cols-lg-8 g-2 g-md-3">
                 <?php foreach ($kategori_display as $kat): ?>
                     <div class="col">
-                        <a href="#terlaris" class="category-card shadow-sm h-100" data-filter="<?= $kat['filter']; ?>" onclick="const tab = document.querySelector('.filter-tab-btn[data-filter=\'<?= $kat['filter']; ?>\']'); if(tab) tab.click();">
-                            <img src="assets/uploads/kategori/<?= htmlspecialchars($kat['gambar']); ?>" alt="<?= htmlspecialchars($kat['nama']); ?>" class="category-circle-img">
+                        <a href="katalog.php?kategori=<?= (int)$kat['id']; ?>" class="category-card shadow-sm h-100">
+                            <img src="<?= (!empty($kat['gambar']) && file_exists(__DIR__ . '/assets/uploads/kategori/' . $kat['gambar'])) ? ('assets/uploads/kategori/' . htmlspecialchars($kat['gambar'])) : 'assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($kat['nama']); ?>" class="category-circle-img" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                             <p class="category-name"><?= htmlspecialchars($kat['nama']); ?></p>
                         </a>
                     </div>
@@ -296,7 +295,7 @@
                                 <div class="product-img-box">
                                     <span class="badge bg-danger badge-discount shadow-sm"><?= $fs['diskon']; ?></span>
                                     <a href="detail_buku.php?id=<?= (int)$fs['id']; ?>" class="d-block text-center">
-                                        <img src="<?= $fs['gambar']; ?>" alt="<?= htmlspecialchars($fs['judul']); ?>" loading="lazy">
+                                        <img src="<?= $fs['gambar']; ?>" alt="<?= htmlspecialchars($fs['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                                     </a>
                                 </div>
 
@@ -340,25 +339,22 @@
                     <h3 class="fw-bold text-dark mb-0">Buku Baru</h3>
                 </div>
 
-                <div class="d-flex gap-1 overflow-x-auto no-scrollbar">
-                    <a href="index.php" class="subnav-link<?= nav_aktif($halaman_ini === 'index.php' && !$kat_dipilih && !$promo_aktif); ?>">Semua</a>
-                    <a href="index.php?kategori=1" class="subnav-link<?= nav_aktif($kat_dipilih === [1]); ?>">Buku Fiksi</a>
-                    <a href="index.php?kategori=2" class="subnav-link<?= nav_aktif($kat_dipilih === [2]); ?>">Buku Non-Fiksi</a>
-                    <a href="index.php?kategori=4" class="subnav-link<?= nav_aktif($kat_dipilih === [4]); ?>">Buku Pelajaran</a>
-                    <a href="index.php?kategori=5" class="subnav-link<?= nav_aktif($kat_dipilih === [5]); ?>">Buku Anak</a>
-                    <a href="index.php?kategori=3" class="subnav-link<?= nav_aktif($kat_dipilih === [3]); ?>">Pengembangan Diri</a>
-                    <a href="index.php?kategori=6" class="subnav-link<?= nav_aktif($kat_dipilih === [6]); ?>">Alat Tulis & ATK</a>
+                <div class="d-flex gap-1 overflow-x-auto no-scrollbar" id="bukuBaruTabs">
+                    <button type="button" class="subnav-link active border-0 bg-transparent" data-filter="all">Semua</button>
+                    <?php foreach ($kategori_display as $kat): ?>
+                        <button type="button" class="subnav-link border-0 bg-transparent" data-filter="<?= (int)$kat['id']; ?>"><?= htmlspecialchars($kat['nama']); ?></button>
+                    <?php endforeach; ?>
                 </div>
             </div>
 
             <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 g-md-4" id="bestSellerGrid">
                 <?php foreach ($buku_baru as $b): ?>
-                    <div class="col bestseller-item" data-category="<?= $b['kategori']; ?>">
+                    <div class="col bestseller-item" data-kategori-id="<?= (int)$b['kategori_id']; ?>">
                         <div class="product-card">
                             <div class="product-img-box">
                                 <span class="rank-badge bg-success text-white shadow-sm"><i class="bi bi-stars me-1"></i>Baru</span>
                                 <a href="detail_buku.php?id=<?= (int)$b['id']; ?>" class="d-block text-center">
-                                    <img src="<?= $b['gambar']; ?>" alt="<?= htmlspecialchars($b['judul']); ?>" loading="lazy">
+                                    <img src="<?= $b['gambar']; ?>" alt="<?= htmlspecialchars($b['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                                 </a>
                             </div>
 
@@ -386,6 +382,18 @@
                         </div>
                     </div>
                 <?php endforeach; ?>
+            </div>
+
+            <div id="bukuBaruEmpty" class="d-none">
+                <div class="empty-state text-center py-5">
+                    <div class="empty-state-icon rounded-circle bg-success-subtle text-success d-inline-flex align-items-center justify-content-center mb-3">
+                        <i class="bi bi-journal-x"></i>
+                    </div>
+                    <h5 class="fw-bold text-dark mb-1">Belum Ada Buku di Kategori Ini</h5>
+                    <p class="text-muted small mb-4 mx-auto" style="max-width: 360px;">
+                        Buku untuk kategori ini belum masuk ke daftar rilisan terbaru. Coba pilih kategori lain atau jelajahi katalog lengkap kami.
+                    </p>
+                </div>
             </div>
         </section>
 
@@ -478,6 +486,37 @@
     </main>
 
     <?php include(__DIR__ . '/layouts/footer.php'); ?>
+
+    <script>
+        function slideProduk(arah) {
+            const slider = document.getElementById('flashSaleSlider');
+            if (slider) {
+                slider.scrollBy({ left: arah * 260, behavior: 'smooth' });
+            }
+        }
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabs = document.querySelectorAll('#bukuBaruTabs [data-filter]');
+            const items = document.querySelectorAll('#bestSellerGrid .bestseller-item');
+            const emptyMsg = document.getElementById('bukuBaruEmpty');
+
+            tabs.forEach(function (tab) {
+                tab.addEventListener('click', function () {
+                    const filter = tab.dataset.filter;
+
+                    tabs.forEach(function (t) { t.classList.toggle('active', t === tab); });
+
+                    let visible = 0;
+                    items.forEach(function (item) {
+                        const cocok = filter === 'all' || item.dataset.kategoriId === filter;
+                        item.classList.toggle('d-none', !cocok);
+                        if (cocok) visible++;
+                    });
+
+                    emptyMsg.classList.toggle('d-none', visible > 0);
+                });
+            });
+        });
+    </script>
 
 </body>
 </html>

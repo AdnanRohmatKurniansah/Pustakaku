@@ -130,7 +130,7 @@
                                         <tr>
                                             <td>
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <img src="assets/uploads/buku/<?= htmlspecialchars($it['gambar']); ?>" alt="<?= htmlspecialchars($it['judul']); ?>" class="rounded border object-fit-cover" style="width: 40px; height: 55px;" onerror="this.onerror=null;this.src='https://placehold.co/160x210/eaf6ef/198754?text=Buku';">
+                                                    <img src="<?= (!empty($it['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $it['gambar'])) ? ('assets/uploads/buku/' . htmlspecialchars($it['gambar'])) : 'assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($it['judul']); ?>" class="rounded border object-fit-cover" style="width: 40px; height: 55px;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                                                     <div>
                                                         <div class="fw-semibold text-dark"><?= htmlspecialchars($it['judul']); ?></div>
                                                         <div class="text-muted" style="font-size: 11px;"><?= htmlspecialchars($it['penulis']); ?></div>

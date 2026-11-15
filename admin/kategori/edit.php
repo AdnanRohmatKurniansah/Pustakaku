@@ -67,11 +67,7 @@
 
                         <div class="mb-4">
                             <label class="form-label small fw-semibold text-secondary d-block">Gambar Saat Ini</label>
-                            <?php if (!empty($kategori['gambar']) && file_exists('../../assets/uploads/kategori/' . $kategori['gambar'])): ?>
-                                <img src="../../assets/uploads/kategori/<?= htmlspecialchars($kategori['gambar']); ?>" alt="Preview" class="rounded-3 border mb-2 object-fit-cover" style="width: 80px; height: 80px;">
-                            <?php else: ?>
-                                <div class="text-muted small mb-2 fst-italic">Tidak ada gambar tersimpan.</div>
-                            <?php endif; ?>
+                            <img src="<?= (!empty($kategori['gambar']) && file_exists('../../assets/uploads/kategori/' . $kategori['gambar'])) ? ('../../assets/uploads/kategori/' . htmlspecialchars($kategori['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="Preview" class="rounded-3 border mb-2 object-fit-cover" style="width: 80px; height: 80px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
 
                             <input type="file" class="form-control" id="gambar" name="gambar" accept="image/*">
                             <div class="form-text small">Biarkan kosong jika tidak ingin mengubah gambar kategori.</div>

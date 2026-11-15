@@ -104,7 +104,7 @@
     $persen = $ada_diskon ? round((($harga - $diskon) / $harga) * 100) : 0;
     $stok = (int)$buku['stok'];
     $habis = $stok <= 0;
-    $gambar = (!empty($buku['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $buku['gambar'])) ? ('assets/uploads/buku/' . $buku['gambar']) : 'assets/images/banner/banner1.jpg';
+    $gambar = (!empty($buku['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $buku['gambar'])) ? ('assets/uploads/buku/' . $buku['gambar']) : 'assets/images/placeholder.png';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -136,7 +136,7 @@
                         <?php if ($ada_diskon): ?>
                             <span class="badge bg-danger position-absolute top-0 start-0 m-2 px-3 py-2 rounded-pill fw-bold shadow-sm">-<?= $persen; ?>%</span>
                         <?php endif; ?>
-                        <img src="<?= htmlspecialchars($gambar); ?>" alt="<?= htmlspecialchars($buku['judul']); ?>" class="img-fluid rounded-3 shadow-sm" style="max-height: 420px; object-fit: contain;">
+                        <img src="<?= htmlspecialchars($gambar); ?>" alt="<?= htmlspecialchars($buku['judul']); ?>" class="img-fluid rounded-3 shadow-sm" style="max-height: 420px; object-fit: contain;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                     </div>
                 </div>
             </div>
@@ -358,13 +358,13 @@
                             $h_bt = (float)$bt['harga'];
                             $d_bt = (float)$bt['harga_diskon'];
                             $ada_d_bt = $d_bt > 0 && $d_bt < $h_bt;
-                            $img_bt = (!empty($bt['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $bt['gambar'])) ? ('assets/uploads/buku/' . $bt['gambar']) : 'assets/images/banner/banner1.jpg';
+                            $img_bt = (!empty($bt['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $bt['gambar'])) ? ('assets/uploads/buku/' . $bt['gambar']) : 'assets/images/placeholder.png';
                         ?>
                         <div class="col">
                             <div class="product-card h-100">
                                 <div class="product-img-box">
                                     <a href="detail_buku.php?id=<?= (int)$bt['id']; ?>" class="d-block text-center">
-                                        <img src="<?= htmlspecialchars($img_bt); ?>" alt="<?= htmlspecialchars($bt['judul']); ?>" loading="lazy">
+                                        <img src="<?= htmlspecialchars($img_bt); ?>" alt="<?= htmlspecialchars($bt['judul']); ?>" loading="lazy" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                                     </a>
                                 </div>
                                 <div class="p-3 d-flex flex-column flex-grow-1">

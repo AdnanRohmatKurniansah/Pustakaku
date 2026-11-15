@@ -151,7 +151,7 @@
                     'penulis' => $r['penulis'],
                     'penerbit' => $r['penerbit'],
                     'berat' => (int) $r['berat_gram'],
-                    'gambar' => 'assets/uploads/buku/' . $r['gambar'],
+                    'gambar' => (!empty($r['gambar']) && file_exists(__DIR__ . '/../assets/uploads/buku/' . $r['gambar'])) ? ('assets/uploads/buku/' . $r['gambar']) : 'assets/images/placeholder.png',
                     'harga' => $harga,
                     'diskon' => $ada ? $diskon : null,
                     'satuan' => $satuan,

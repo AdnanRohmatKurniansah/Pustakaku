@@ -223,7 +223,7 @@
                                                     </td>
                                                     <td>
                                                         <div class="d-flex align-items-center gap-2">
-                                                            <img src="../../assets/uploads/buku/<?= htmlspecialchars($top['gambar']); ?>" alt="<?= htmlspecialchars($top['judul']); ?>" class="rounded border object-fit-cover" style="width: 36px; height: 50px;" onerror="this.onerror=null;this.src='https://placehold.co/160x210/eaf6ef/198754?text=Buku';">
+                                                            <img src="<?= (!empty($top['gambar']) && file_exists(__DIR__ . '/../../assets/uploads/buku/' . $top['gambar'])) ? ('../../assets/uploads/buku/' . htmlspecialchars($top['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($top['judul']); ?>" class="rounded border object-fit-cover" style="width: 36px; height: 50px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
                                                             <div>
                                                                 <div class="fw-semibold text-dark small"><?= htmlspecialchars($top['judul']); ?></div>
                                                                 <div class="text-muted" style="font-size: 11px;"><?= htmlspecialchars($top['penulis']); ?></div>
