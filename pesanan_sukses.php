@@ -3,6 +3,8 @@
 
     require_once __DIR__ . '/config/database.php';
     require_once __DIR__ . '/cart/proses_keranjang.php';
+    require_once __DIR__ . '/services/cloudinary_service.php';
+    require_once __DIR__ . '/services/midtrans_service.php';
 
     if (!isset($_SESSION['user_id'])) {
         $_SESSION['error'] = 'Silakan masuk ke akun Anda terlebih dahulu.';
@@ -12,6 +14,15 @@
 
     $user_id = (int) $_SESSION['user_id'];
     $pesanan_id = (int) ($_GET['id'] ?? 0);
+    $order_number = trim($_GET['order_id'] ?? '');
+
+    if ($pesanan_id <= 0 && !empty($order_number)) {
+        $order_esc = mysqli_real_escape_string($conn, $order_number);
+        $q_find = mysqli_query($conn, "SELECT id FROM pesanan WHERE nomor_pesanan = '$order_esc' AND user_id = '$user_id' LIMIT 1");
+        if ($q_find && $r_find = mysqli_fetch_assoc($q_find)) {
+            $pesanan_id = (int) $r_find['id'];
+        }
+    }
 
     if ($pesanan_id <= 0) {
         header('Location: index.php');
@@ -25,6 +36,18 @@
         $_SESSION['error'] = 'Pesanan tidak ditemukan.';
         header('Location: index.php');
         exit;
+    }
+
+    $status_param = strtolower($_GET['transaction_status'] ?? '');
+    if (in_array($status_param, ['settlement', 'capture', 'success'], true) && $pesanan['status_pesanan'] === 'menunggu_pembayaran') {
+        mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'diproses', updated_at = NOW() WHERE id = '$pesanan_id'");
+        $pesanan['status_pesanan'] = 'diproses';
+    } elseif ($pesanan['status_pesanan'] === 'menunggu_pembayaran') {
+        $api_status = midtrans_check_transaction_status($pesanan['nomor_pesanan']);
+        if (in_array(strtolower($api_status ?? ''), ['settlement', 'capture', 'success'], true)) {
+            mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'diproses', updated_at = NOW() WHERE id = '$pesanan_id'");
+            $pesanan['status_pesanan'] = 'diproses';
+        }
     }
 
     $q_items = mysqli_query($conn, "SELECT dp.*, b.judul, b.penulis, b.gambar FROM detail_pesanan dp JOIN buku b ON dp.buku_id = b.id WHERE dp.pesanan_id = '$pesanan_id'");
@@ -42,6 +65,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/checkout_custom.css">
 </head>
 <body class="bg-light">
     <?php include(__DIR__ . '/layouts/navbar.php'); ?>
@@ -50,17 +74,25 @@
         <nav aria-label="breadcrumb" class="mb-3">
             <ol class="breadcrumb small">
                 <li class="breadcrumb-item"><a href="index.php" class="text-success text-decoration-none">Beranda</a></li>
-                <li class="breadcrumb-item"><a href="akun.php#pesanan" class="text-success text-decoration-none">Akun Saya</a></li>
+                <li class="breadcrumb-item"><a href="akun.php?tab=pesanan" class="text-success text-decoration-none">Akun Saya</a></li>
                 <li class="breadcrumb-item active" aria-current="page">Pesanan Sukses</li>
             </ol>
         </nav>
+
+        <?php if (!empty($_SESSION['success'])): ?>
+            <div class="alert alert-success alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i><?= htmlspecialchars($_SESSION['success']); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <?php unset($_SESSION['success']); ?>
+        <?php endif; ?>
 
         <div class="row justify-content-center">
             <div class="col-12 col-lg-12">
                 <div class="card border-0 shadow-sm rounded-4 p-4 mb-4 bg-white">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom mb-3">
                         <div>
-                            <h5 class="fw-bold text-dark mb-0">Pesanan Berhasil & Terkonfirmasi</h5>
+                            <h5 class="fw-bold text-dark mb-0">Rincian & Status Pesanan</h5>
                             <div class="text-muted small">Waktu Pemesanan: <?= date('d M Y, H:i', strtotime($pesanan['created_at'])); ?> WIB</div>
                         </div>
                         <div class="d-flex align-items-center gap-2">
@@ -72,23 +104,37 @@
                         </div>
                     </div>
 
-                    <div class="alert alert-success border-success-subtle rounded-4 d-flex align-items-center gap-3 p-3 mb-4">
-                        <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;"><i class="bi bi-box-seam-fill fs-5"></i></div>
-                        <div>
-                            <div class="fw-bold text-success mb-1">Pembayaran Berhasil! Pesanan Sedang Diproses Penjual</div>
-                            <div class="text-secondary small">Pembayaran Anda sebesar <strong><?= formatRupiah($pesanan['total_bayar']); ?></strong> melalui <strong><?= htmlspecialchars($pesanan['metode_pembayaran']); ?></strong> telah lunas terverifikasi. Penjual saat ini sedang menyiapkan dan mengemas buku pesanan Anda untuk segera dikirimkan.</div>
+                    <?php if ($pesanan['status_pesanan'] === 'menunggu_pembayaran'): ?>
+                        <div class="alert alert-warning border-warning-subtle rounded-4 d-flex align-items-center gap-3 p-3 mb-4">
+                            <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                                <i class="bi bi-clock-history fs-4"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark mb-1">Pesanan Dibuat - Menunggu Konfirmasi Pembayaran</div>
+                                <div class="text-secondary small">Total tagihan Anda adalah <strong><?= formatRupiah($pesanan['total_bayar']); ?></strong>. Sistem kami secara otomatis memperbarui status pesanan Anda begitu pembayaran terverifikasi.</div>
+                            </div>
                         </div>
-                    </div>
+                    <?php else: ?>
+                        <div class="alert alert-success border-success-subtle rounded-4 d-flex align-items-center gap-3 p-3 mb-4">
+                            <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                                <i class="bi bi-check2-circle fs-4"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-success mb-1">Pembayaran Berhasil! Pesanan Sedang Diproses Penjual</div>
+                                <div class="text-secondary small">Pembayaran Anda sebesar <strong><?= formatRupiah($pesanan['total_bayar']); ?></strong> melalui <strong><?= htmlspecialchars($pesanan['metode_pembayaran']); ?></strong> telah kami terima. Penjual sedang menyiapkan pesanan Anda.</div>
+                            </div>
+                        </div>
+                    <?php endif; ?>
 
                     <div class="p-3 rounded-4 bg-light border mb-4">
                         <div class="row g-2">
                             <div class="col-12 col-sm-6 col-md-3">
-                                <span class="text-secondary small d-block">Status Pembayaran:</span>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1 fw-semibold"><i class="bi bi-check-circle-fill me-1"></i>Sudah Dibayar (Lunas)</span>
-                            </div>
-                            <div class="col-12 col-sm-6 col-md-3">
                                 <span class="text-secondary small d-block">Metode Pembayaran:</span>
                                 <strong class="text-dark small"><i class="bi bi-wallet2 me-1 text-success"></i><?= htmlspecialchars($pesanan['metode_pembayaran']); ?></strong>
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-3">
+                                <span class="text-secondary small d-block">Layanan Pengiriman:</span>
+                                <strong class="text-dark small"><i class="bi bi-truck me-1 text-primary"></i><?= htmlspecialchars($pesanan['kurir_service'] ?? 'Kurir Reguler'); ?></strong>
                             </div>
                             <div class="col-12 col-sm-6 col-md-3">
                                 <span class="text-secondary small d-block">Total Pembayaran:</span>
@@ -127,10 +173,11 @@
                                 </thead>
                                 <tbody>
                                     <?php foreach ($items as $it): ?>
+                                        <?php $img_url = resolveImageUrl($it['gambar'], 'buku'); ?>
                                         <tr>
                                             <td>
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <img src="<?= (!empty($it['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $it['gambar'])) ? ('assets/uploads/buku/' . htmlspecialchars($it['gambar'])) : 'assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($it['judul']); ?>" class="rounded border object-fit-cover" style="width: 40px; height: 55px;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
+                                                    <img src="<?= htmlspecialchars($img_url); ?>" alt="<?= htmlspecialchars($it['judul']); ?>" class="rounded border object-fit-cover" style="width: 40px; height: 55px;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                                                     <div>
                                                         <div class="fw-semibold text-dark"><?= htmlspecialchars($it['judul']); ?></div>
                                                         <div class="text-muted" style="font-size: 11px;"><?= htmlspecialchars($it['penulis']); ?></div>
@@ -155,7 +202,7 @@
                                         </tr>
                                     <?php endif; ?>
                                     <tr>
-                                        <td colspan="3" class="text-end text-muted">Ongkos Kirim:</td>
+                                        <td colspan="3" class="text-end text-muted">Ongkos Kirim (<?= htmlspecialchars($pesanan['kurir_service'] ?? 'Kurir'); ?>):</td>
                                         <td class="text-end fw-semibold"><?= ((float)$pesanan['ongkos_kirim'] == 0) ? 'GRATIS' : formatRupiah($pesanan['ongkos_kirim']); ?></td>
                                     </tr>
                                     <tr class="table-light">
@@ -169,7 +216,7 @@
 
                     <div class="d-flex flex-wrap gap-2 justify-content-between pt-2">
                         <a href="katalog.php" class="btn btn-outline-success rounded-pill px-4 fw-semibold"><i class="bi bi-grid me-1"></i>Belanja Lagi</a>
-                        <a href="akun.php#pesanan" class="btn btn-success rounded-pill px-4 fw-semibold"><i class="bi bi-receipt me-1"></i>Lihat Pesanan Saya</a>
+                        <a href="akun.php?tab=pesanan" class="btn btn-success rounded-pill px-4 fw-semibold"><i class="bi bi-receipt me-1"></i>Lihat Pesanan Saya</a>
                     </div>
                 </div>
             </div>
@@ -180,4 +227,3 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
-

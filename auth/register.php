@@ -2,14 +2,9 @@
     session_start();
     require_once __DIR__ . '/../config/helper.php';
 
-    if (isset($_SESSION['user_id']) && isset($_SESSION['role'])) {
-        if ($_SESSION['role'] === 'admin') {
-            header("Location: ../admin/index.php");
-            exit;
-        } else {
-            header("Location: ../index.php");
-            exit;
-        }
+    if (isset($_SESSION['user_id'])) {
+        header("Location: ../index.php");
+        exit;
     }
 
     $old_nama = $_SESSION['old_nama'] ?? '';
@@ -41,7 +36,7 @@
                             </span>
                         </a>
                         <h5 class="fw-bold text-dark mt-2 mb-1">Daftar Akun PustakaKu</h5>
-                        <p class="text-muted small mb-0">Buat akun untuk kemudahan belanja buku dan ATK favorit</p>
+                        <p class="text-muted small mb-0">Lengkapi data diri Anda untuk membuat akun baru</p>
                     </div>
 
                     <form action="process_register.php" method="POST">
@@ -79,6 +74,19 @@
                         </div>
                     </form>
 
+                    <div class="d-flex align-items-center my-3">
+                        <hr class="flex-grow-1 my-0">
+                        <span class="px-3 small text-muted">atau</span>
+                        <hr class="flex-grow-1 my-0">
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <a href="google_login.php" class="btn btn-outline-dark d-flex align-items-center justify-content-center gap-2 py-2 fw-semibold rounded-3">
+                            <i class="bi bi-google text-danger"></i>
+                            <span>Daftar dengan Google</span>
+                        </a>
+                    </div>
+
                     <div class="text-center mt-3 pt-2 border-top">
                         <span class="small text-muted">Sudah punya akun? </span>
                         <a href="login.php" class="small fw-semibold text-success text-decoration-none">Masuk di sini</a>
@@ -96,4 +104,3 @@
     <?= tampilkan_alert_toast(); ?>
 </body>
 </html>
-

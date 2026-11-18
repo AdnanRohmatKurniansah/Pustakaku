@@ -84,7 +84,7 @@
                             <?php endif; ?>
                             <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
                                 <li><a class="dropdown-item py-2" href="akun.php"><i class="bi bi-person-circle me-2 text-success"></i>Akun Saya</a></li>
-                                <li><a class="dropdown-item py-2" href="akun.php#pesanan"><i class="bi bi-receipt me-2 text-success"></i>Pesanan Saya</a></li>
+                                <li><a class="dropdown-item py-2" href="akun.php?tab=pesanan"><i class="bi bi-receipt me-2 text-success"></i>Pesanan Saya</a></li>
                             <?php endif; ?>
                             <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
                                 <li><a class="dropdown-item py-2" href="keranjang.php"><i class="bi bi-bag-check me-2 text-success"></i>Keranjang Saya</a></li>

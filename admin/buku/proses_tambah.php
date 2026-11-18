@@ -1,5 +1,6 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../services/cloudinary_service.php';
 
     session_start();
 
@@ -21,53 +22,68 @@
         $berat_gram = isset($_POST['berat_gram']) ? intval($_POST['berat_gram']) : 200;
         $deskripsi = trim($_POST['deskripsi'] ?? '');
 
-        if ($kategori_id <= 0 || empty($judul) || empty($penulis) || empty($penerbit) || $harga < 0 || $stok < 0 || empty($tahun_terbit) || empty($isbn) || empty($deskripsi)) {
+        if ($kategori_id <= 0 || empty($judul) || empty($penulis) || empty($penerbit) || $harga < 0 || $stok < 0 || empty($isbn) || empty($deskripsi)) {
             $_SESSION['error'] = "Mohon lengkapi semua data wajib bertanda bintang (*)";
             header("Location: tambah.php");
             exit;
         }
 
-        $gambar_nama = '';
-        if (isset($_FILES['gambar']) && $_FILES['gambar']['error'] === UPLOAD_ERR_OK) {
-            $file_tmp = $_FILES['gambar']['tmp_name'];
-            $file_name = $_FILES['gambar']['name'];
-            $file_ext = strtolower(pathinfo($file_name, PATHINFO_EXTENSION));
-            $allowed_ext = ['jpg', 'jpeg', 'png', 'webp'];
+        $uploaded_images = [];
+        if (isset($_FILES['gambar'])) {
+            $files = $_FILES['gambar'];
+            $count = is_array($files['name']) ? count($files['name']) : 1;
 
-            if (in_array($file_ext, $allowed_ext)) {
-                $gambar_nama = time() . '_' . uniqid() . '.' . $file_ext;
-                $target_dir = '../../assets/uploads/buku/';
-                if (!is_dir($target_dir)) {
-                    mkdir($target_dir, 0777, true);
+            for ($i = 0; $i < $count; $i++) {
+                $tmp_name = is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'];
+                $name = is_array($files['name']) ? $files['name'][$i] : $files['name'];
+                $error = is_array($files['error']) ? $files['error'][$i] : $files['error'];
+
+                if ($error === UPLOAD_ERR_OK && is_uploaded_file($tmp_name)) {
+                    $single_file = [
+                        'tmp_name' => $tmp_name,
+                        'name' => $name,
+                        'error' => $error
+                    ];
+                    $upload_res = uploadFileCloudinary($single_file, 'buku');
+                    if ($upload_res['ok']) {
+                        $uploaded_images[] = [
+                            'url' => $upload_res['url'],
+                            'public_id' => $upload_res['public_id']
+                        ];
+                    }
                 }
-                if (!move_uploaded_file($file_tmp, $target_dir . $gambar_nama)) {
-                    $_SESSION['error'] = "Gagal mengunggah foto sampul buku";
-                    header("Location: tambah.php");
-                    exit;
-                }
-            } else {
-                $_SESSION['error'] = "Format sampul harus JPG, JPEG, PNG, atau WEBP";
-                header("Location: tambah.php");
-                exit;
             }
-        } else {
-            $_SESSION['error'] = "Foto sampul buku wajib diunggah";
+        }
+
+        if (empty($uploaded_images)) {
+            $_SESSION['error'] = "Minimal satu foto sampul produk wajib diunggah.";
             header("Location: tambah.php");
             exit;
         }
+
+        $primary_image = $uploaded_images[0]['url'];
 
         $judul = mysqli_real_escape_string($conn, $judul);
         $penulis = mysqli_real_escape_string($conn, $penulis);
         $penerbit = mysqli_real_escape_string($conn, $penerbit);
         $isbn = mysqli_real_escape_string($conn, $isbn);
         $deskripsi = mysqli_real_escape_string($conn, $deskripsi);
-        $gambar_nama = mysqli_real_escape_string($conn, $gambar_nama);
+        $primary_image_esc = mysqli_real_escape_string($conn, $primary_image);
 
-        $query_str = "INSERT INTO buku (kategori_id, judul, penulis, penerbit, tahun_terbit, isbn, harga, harga_diskon, stok, berat_gram, deskripsi, gambar) VALUES ('$kategori_id', '$judul', '$penulis', '$penerbit', $tahun_terbit, '$isbn', '$harga', $harga_diskon, '$stok', '$berat_gram', '$deskripsi', '$gambar_nama')";
+        $query_str = "INSERT INTO buku (kategori_id, judul, penulis, penerbit, tahun_terbit, isbn, harga, harga_diskon, stok, berat_gram, deskripsi, gambar) VALUES ('$kategori_id', '$judul', '$penulis', '$penerbit', $tahun_terbit, '$isbn', '$harga', $harga_diskon, '$stok', '$berat_gram', '$deskripsi', '$primary_image_esc')";
         $insert = mysqli_query($conn, $query_str);
 
         if ($insert) {
-            $_SESSION['success'] = "Buku berhasil ditambahkan";
+            $buku_id = mysqli_insert_id($conn);
+
+            foreach ($uploaded_images as $index => $img) {
+                $url_esc = mysqli_real_escape_string($conn, $img['url']);
+                $pid_esc = !empty($img['public_id']) ? "'" . mysqli_real_escape_string($conn, $img['public_id']) . "'" : "NULL";
+                $is_primary = ($index === 0) ? 1 : 0;
+                mysqli_query($conn, "INSERT INTO buku_gambar (buku_id, url_gambar, public_id, is_primary, urutan) VALUES ('$buku_id', '$url_esc', $pid_esc, $is_primary, $index)");
+            }
+
+            $_SESSION['success'] = "Buku dan seluruh foto galeri berhasil ditambahkan.";
             header("Location: index.php");
             exit;
         } else {

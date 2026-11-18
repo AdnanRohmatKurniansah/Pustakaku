@@ -3,6 +3,8 @@
 
     require_once __DIR__ . '/config/database.php';
     require_once __DIR__ . '/cart/proses_keranjang.php';
+    require_once __DIR__ . '/services/cloudinary_service.php';
+    require_once __DIR__ . '/services/rajaongkir_service.php';
 
     if (!isset($_SESSION['user_id'])) {
         $_SESSION['error'] = 'Silakan masuk ke akun Anda terlebih dahulu untuk melanjutkan checkout.';
@@ -66,215 +68,218 @@
     }
 
     $total_hemat = $total_normal - $total_buku;
-    $dapat_gratis_ongkir = ($total_buku >= 150000);
-    $potongan_ongkir_subsidi = $dapat_gratis_ongkir ? 15000 : 0;
-    $ongkir_reguler = max(0, 15000 - $potongan_ongkir_subsidi);
-    $ongkir_express = max(0, 25000 - $potongan_ongkir_subsidi);
-    $total_bayar = $total_buku + $ongkir_reguler;
+
+    $q_alamat = mysqli_query($conn, "SELECT * FROM user_alamat WHERE user_id = '$user_id' ORDER BY is_primary DESC, id ASC");
+    $alamat_list = [];
+    $selected_alamat = null;
+    if ($q_alamat) {
+        while ($al = mysqli_fetch_assoc($q_alamat)) {
+            $alamat_list[] = $al;
+            if ($al['is_primary'] == 1 && $selected_alamat === null) {
+                $selected_alamat = $al;
+            }
+        }
+    }
+    if ($selected_alamat === null && !empty($alamat_list)) {
+        $selected_alamat = $alamat_list[0];
+    }
+
+    $default_city_id = $selected_alamat['kota_id'] ?? 501;
+    $initial_courier = 'jne';
+    $initial_services = rajaongkir_calculate_cost($default_city_id, $total_berat, $initial_courier);
+    $initial_cost = 0;
+    $initial_service_name = 'JNE - Reguler';
+    if (!empty($initial_services) && is_array($initial_services)) {
+        $first_srv = $initial_services[0];
+        $initial_cost = (int)($first_srv['cost'] ?? 0);
+        $initial_service_name = $first_srv['service_name'] ?? ($first_srv['service'] ?? 'JNE - Reguler');
+        if (!empty($first_srv['etd']) && strpos($initial_service_name, $first_srv['etd']) === false) {
+            $initial_service_name .= ' (' . $first_srv['etd'] . ')';
+        }
+    }
+
+    $total_bayar = $total_buku + $initial_cost;
+    $provinces = rajaongkir_get_provinces();
+
+    $midtrans_client_key = $_ENV['MIDTRANS_CLIENT_KEY'] ?? '';
+    $midtrans_is_prod = (($_ENV['MIDTRANS_IS_PRODUCTION'] ?? 'false') === 'true');
+    $snap_js_url = $midtrans_is_prod ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js';
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout Pesanan - PustakaKu</title>
+    <title>Checkout & Pembayaran - PustakaKu</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
+    <?php if (!empty($midtrans_client_key)): ?>
+        <script src="<?= $snap_js_url; ?>" data-client-key="<?= htmlspecialchars($midtrans_client_key); ?>"></script>
+    <?php endif; ?>
 </head>
 <body class="bg-light">
     <?php include(__DIR__ . '/layouts/navbar.php'); ?>
 
     <main class="container my-3 my-md-4">
-        <section class="mb-3 mb-lg-4">
-            <nav aria-label="breadcrumb">
-                <ol class="breadcrumb small mb-2">
-                    <li class="breadcrumb-item"><a href="index.php" class="text-success text-decoration-none">Beranda</a></li>
-                    <li class="breadcrumb-item"><a href="keranjang.php" class="text-success text-decoration-none">Keranjang</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Checkout Pesanan</li>
-                </ol>
-            </nav>
-            <div class="d-flex flex-wrap align-items-center gap-2">
-                <h2 class="fw-bold text-dark mb-0">Checkout Pesanan</h2>
+        <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 mb-4 pb-2">
+            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 fw-semibold"><i class="bi bi-cart-check me-1"></i>1. Keranjang</span>
+            <i class="bi bi-chevron-right text-muted small"></i>
+            <span class="badge bg-success text-white rounded-pill px-3 py-2 fw-bold shadow-sm"><i class="bi bi-credit-card me-1"></i>2. Pengiriman & Pembayaran</span>
+            <i class="bi bi-chevron-right text-muted small"></i>
+            <span class="badge bg-white text-muted border rounded-pill px-3 py-2"><i class="bi bi-check2-circle me-1"></i>3. Pesanan Selesai</span>
+        </div>
+
+        <?php if (!empty($_SESSION['error'])): ?>
+            <div class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i><?= htmlspecialchars($_SESSION['error']); ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            <p class="text-muted small mb-0 mt-1">Lengkapi alamat pengiriman dan pilih metode pembayaran untuk menyelesaikan pesanan Anda.</p>
-        </section>
+            <?php unset($_SESSION['error']); ?>
+        <?php endif; ?>
 
         <form action="proses_checkout.php" method="POST" id="formCheckout">
+            <?php 
+                $selected_alamat_full = '';
+                if ($selected_alamat) {
+                    $kec_str = !empty($selected_alamat['kecamatan']) ? 'Kec. ' . $selected_alamat['kecamatan'] . ', ' : '';
+                    $selected_alamat_full = $selected_alamat['alamat_lengkap'] . ', ' . $kec_str . $selected_alamat['kota_nama'] . ', ' . $selected_alamat['provinsi_nama'] . ' ' . $selected_alamat['kode_pos'];
+                }
+            ?>
+            <input type="hidden" name="alamat_id" id="inputAlamatId" value="<?= $selected_alamat ? (int)$selected_alamat['id'] : 0; ?>">
+            <input type="hidden" name="nama_penerima" id="inputNamaPenerima" value="<?= $selected_alamat ? htmlspecialchars($selected_alamat['nama_penerima']) : htmlspecialchars($user['nama_lengkap']); ?>">
+            <input type="hidden" name="no_telepon" id="inputNoTelepon" value="<?= $selected_alamat ? htmlspecialchars($selected_alamat['no_telepon']) : htmlspecialchars($user['no_telepon']); ?>">
+            <input type="hidden" name="alamat_pengiriman" id="inputAlamatPengiriman" value="<?= $selected_alamat ? htmlspecialchars($selected_alamat_full) : htmlspecialchars($user['alamat_lengkap'] ?? ''); ?>">
+            <input type="hidden" name="kurir_service" id="inputKurirService" value="<?= htmlspecialchars($initial_service_name); ?>">
+            <input type="hidden" name="ongkos_kirim" id="inputOngkir" value="<?= $initial_cost; ?>">
+            <input type="hidden" name="metode_pembayaran" value="Midtrans">
+            <input type="hidden" id="currentCityId" value="<?= $default_city_id; ?>">
+            <input type="hidden" id="totalBeratPaket" value="<?= $total_berat; ?>">
+
             <div class="row g-3 g-lg-4">
                 <div class="col-12 col-lg-8">
-                    <div class="bg-white border rounded-4 shadow-sm p-3 p-md-4 mb-3">
-                        <div class="d-flex align-items-center gap-2 pb-3 border-bottom mb-3">
-                            <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;"><i class="bi bi-geo-alt-fill fs-5"></i></div>
-                            <div>
-                                <h5 class="fw-bold text-dark mb-0">Alamat Pengiriman</h5>
-                                <div class="text-muted small">Pesanan buku akan dikirimkan ke alamat ini</div>
+                    <div class="card border-0 shadow-sm rounded-4 p-4 mb-3 bg-white">
+                        <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-geo-alt-fill fs-5"></i>
+                                </div>
+                                <h6 class="fw-bold text-dark mb-0 fs-6">Alamat Pengiriman</h6>
+                            </div>
+                            <?php if (!empty($alamat_list)): ?>
+                                <button type="button" class="btn btn-outline-success btn-sm rounded-pill px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalPilihAlamat">
+                                    <i class="bi bi-arrow-left-right me-1"></i>Pilih Alamat Lain
+                                </button>
+                            <?php else: ?>
+                                <button type="button" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold" data-bs-toggle="modal" data-bs-target="#modalTambahAlamatCheckout">
+                                    <i class="bi bi-plus-lg me-1"></i>Tambah Alamat
+                                </button>
+                            <?php endif; ?>
+                        </div>
+
+                        <?php if ($selected_alamat): ?>
+                            <div class="p-3 rounded-4 bg-light border border-success-subtle" id="displayAlamatTerpilih">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="badge bg-success rounded-pill px-2 py-1 small"><?= htmlspecialchars($selected_alamat['label_alamat']); ?></span>
+                                    <strong class="text-dark small" id="displayNamaTelp"><?= htmlspecialchars($selected_alamat['nama_penerima']); ?> (<?= htmlspecialchars($selected_alamat['no_telepon']); ?>)</strong>
+                                </div>
+                                <div class="text-secondary small mb-1" id="displayAlamatBaris1"><?= htmlspecialchars($selected_alamat['alamat_lengkap']); ?></div>
+                                <div class="text-muted small" id="displayAlamatBaris2"><?= !empty($selected_alamat['kecamatan']) ? 'Kec. ' . htmlspecialchars($selected_alamat['kecamatan']) . ', ' : ''; ?><?= htmlspecialchars($selected_alamat['kota_nama']); ?>, <?= htmlspecialchars($selected_alamat['provinsi_nama']); ?> <?= htmlspecialchars($selected_alamat['kode_pos']); ?></div>
+                            </div>
+                        <?php else: ?>
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-semibold text-secondary">Nama Penerima <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control rounded-3" value="<?= htmlspecialchars($user['nama_lengkap']); ?>" oninput="document.getElementById('inputNamaPenerima').value = this.value;" required>
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label class="form-label small fw-semibold text-secondary">Nomor Telepon / WA <span class="text-danger">*</span></label>
+                                    <input type="tel" class="form-control rounded-3" value="<?= htmlspecialchars($user['no_telepon'] ?? ''); ?>" oninput="document.getElementById('inputNoTelepon').value = this.value;" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label small fw-semibold text-secondary">Alamat Lengkap <span class="text-danger">*</span></label>
+                                    <textarea class="form-control rounded-3" rows="2" oninput="document.getElementById('inputAlamatPengiriman').value = this.value;" required><?= htmlspecialchars($user['alamat_lengkap'] ?? ''); ?></textarea>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="card border-0 shadow-sm rounded-4 p-4 mb-3 bg-white">
+                        <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                    <i class="bi bi-truck fs-5"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-0 fs-6">Layanan Pengiriman</h6>
+                                    <div class="text-muted small">Berat total paket: <?= number_format($total_berat / 1000, 1, ',', '.'); ?> kg (<?= $total_berat; ?> gram)</div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="row g-3 mb-3">
-                            <div class="col-12 col-md-6">
-                                <label for="nama_penerima" class="form-label small fw-semibold text-secondary">Nama Penerima <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control rounded-3" id="nama_penerima" name="nama_penerima" value="<?= htmlspecialchars($user['nama_lengkap']); ?>" required>
+                        <div class="d-flex gap-2 mb-3">
+                            <div class="flex-fill">
+                                <input type="radio" class="btn-check courier-choice" name="pilih_kurir" id="kurir_jne" value="jne" checked>
+                                <label class="btn btn-outline-success w-100 py-2 rounded-3 fw-semibold small" for="kurir_jne">JNE Express</label>
                             </div>
-                            <div class="col-12 col-md-6">
-                                <label for="no_telepon" class="form-label small fw-semibold text-secondary">Nomor Telepon / WhatsApp <span class="text-danger">*</span></label>
-                                <input type="tel" class="form-control rounded-3" id="no_telepon" name="no_telepon" placeholder="Contoh: 08123456789" value="<?= htmlspecialchars($user['no_telepon'] ?? ''); ?>" required>
+                            <div class="flex-fill">
+                                <input type="radio" class="btn-check courier-choice" name="pilih_kurir" id="kurir_pos" value="pos">
+                                <label class="btn btn-outline-success w-100 py-2 rounded-3 fw-semibold small" for="kurir_pos">POS Indonesia</label>
+                            </div>
+                            <div class="flex-fill">
+                                <input type="radio" class="btn-check courier-choice" name="pilih_kurir" id="kurir_tiki" value="tiki">
+                                <label class="btn btn-outline-success w-100 py-2 rounded-3 fw-semibold small" for="kurir_tiki">TIKI</label>
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            <label for="alamat_pengiriman" class="form-label small fw-semibold text-secondary">Alamat Lengkap Pengiriman <span class="text-danger">*</span></label>
-                            <textarea class="form-control rounded-3" id="alamat_pengiriman" name="alamat_pengiriman" rows="3" placeholder="Nama jalan, nomor rumah/kantor, RT/RW, kelurahan, kecamatan, kota/kabupaten, dan kode pos" required><?= htmlspecialchars($user['alamat_lengkap'] ?? ''); ?></textarea>
-                        </div>
-
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" name="simpan_ke_profil" value="1" id="simpanKeProfil" <?= empty($user['alamat_lengkap']) ? 'checked' : ''; ?>>
-                            <label class="form-check-label small text-muted" for="simpanKeProfil">
-                                Simpan / perbarui nomor telepon dan alamat ini sebagai alamat default profil akun saya
-                            </label>
+                        <div class="d-flex flex-column gap-2" id="shippingServicesList">
+                            <?php if (!empty($initial_services)): ?>
+                                <?php foreach ($initial_services as $idx => $srv): ?>
+                                    <?php 
+                                        $is_srv_checked = ($idx === 0);
+                                        $display_title = $srv['service_name'] ?? ($srv['service'] ?? 'Layanan Pengiriman');
+                                        $display_etd = $srv['etd'] ?? '-';
+                                    ?>
+                                    <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between gap-3 cursor-pointer service-card <?= $is_srv_checked ? 'border-success bg-success-subtle bg-opacity-25' : ''; ?>" style="cursor: pointer;">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <input class="form-check-input m-0 service-radio" type="radio" name="service_choice" value="<?= (int)$srv['cost']; ?>" data-name="<?= htmlspecialchars($display_title); ?>" <?= $is_srv_checked ? 'checked' : ''; ?>>
+                                            <div>
+                                                <div class="fw-bold text-dark small"><?= htmlspecialchars($display_title); ?></div>
+                                                <div class="text-muted" style="font-size: 11px;"><i class="bi bi-clock-history me-1"></i>Estimasi tiba: <?= htmlspecialchars($display_etd); ?></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="fw-bold text-success"><?= formatRupiah($srv['cost']); ?></div>
+                                        </div>
+                                    </label>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="text-muted small p-2">Pilih kurir untuk menampilkan layanan pengiriman.</div>
+                            <?php endif; ?>
                         </div>
                     </div>
 
-                    <div class="bg-white border rounded-4 shadow-sm p-3 p-md-4 mb-3">
-                        <div class="d-flex align-items-center gap-2 pb-3 border-bottom mb-3">
-                            <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;"><i class="bi bi-truck fs-5"></i></div>
-                            <div>
-                                <h5 class="fw-bold text-dark mb-0">Opsi Pengiriman</h5>
-                                <div class="text-muted small">Estimasi total berat paket: <?= number_format($total_berat / 1000, 1, ',', '.'); ?> kg (<?= $total_berat; ?> gram)</div>
-                            </div>
+                    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white">
+                        <div class="d-flex align-items-center gap-2 pb-2 mb-2">
+                            <i class="bi bi-chat-left-text text-success"></i>
+                            <h6 class="fw-bold text-dark mb-0 small">Catatan Pesanan (Opsional)</h6>
                         </div>
-
-                        <div class="d-flex flex-column gap-2" id="shippingOptions">
-                            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between gap-3 cursor-pointer shipping-card border-success bg-success-subtle bg-opacity-25" style="cursor: pointer;">
-                                <div class="d-flex align-items-center gap-3">
-                                    <input class="form-check-input m-0 shipping-radio" type="radio" name="opsi_pengiriman" value="reguler" data-ongkir="<?= $ongkir_reguler; ?>" checked>
-                                    <div>
-                                        <div class="fw-bold text-dark">Kurir Reguler (JNE / J&T / SiCepat)</div>
-                                        <div class="text-muted small">Estimasi tiba 2-4 hari kerja</div>
-                                    </div>
-                                </div>
-                                <div class="text-end">
-                                    <?php if ($dapat_gratis_ongkir): ?>
-                                        <span class="badge bg-success rounded-pill px-3 py-1 fw-bold">GRATIS</span>
-                                        <div class="text-muted small" style="font-size: 11px;"><del>Rp 15.000</del></div>
-                                    <?php else: ?>
-                                        <div class="fw-bold text-dark">Rp 15.000</div>
-                                    <?php endif; ?>
-                                </div>
-                            </label>
-
-                            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between gap-3 cursor-pointer shipping-card" style="cursor: pointer;">
-                                <div class="d-flex align-items-center gap-3">
-                                    <input class="form-check-input m-0 shipping-radio" type="radio" name="opsi_pengiriman" value="express" data-ongkir="<?= $ongkir_express; ?>">
-                                    <div>
-                                        <div class="fw-bold text-dark">Kurir Kilat Express (JNE YES / SiCepat BEST)</div>
-                                        <div class="text-muted small">Estimasi tiba 1-2 hari kerja</div>
-                                    </div>
-                                </div>
-                                <div class="text-end">
-                                    <?php if ($dapat_gratis_ongkir): ?>
-                                        <div class="fw-bold text-success"><?= formatRupiah($ongkir_express); ?></div>
-                                        <div class="text-muted small" style="font-size: 11px;"><del>Rp 25.000</del> <span class="text-success fw-semibold">(-Rp 15.000)</span></div>
-                                    <?php else: ?>
-                                        <div class="fw-bold text-dark">Rp 25.000</div>
-                                    <?php endif; ?>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="bg-white border rounded-4 shadow-sm p-3 p-md-4 mb-3">
-                        <div class="d-flex align-items-center gap-2 pb-3 border-bottom mb-3">
-                            <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;"><i class="bi bi-wallet2 fs-5"></i></div>
-                            <div>
-                                <h5 class="fw-bold text-dark mb-0">Metode Pembayaran <span class="text-danger">*</span></h5>
-                                <div class="text-muted small">Pilih metode pembayaran yang paling nyaman untuk Anda</div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex flex-column gap-2" id="paymentOptions">
-                            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between gap-3 payment-card border-success bg-success-subtle bg-opacity-25" style="cursor: pointer;">
-                                <div class="d-flex align-items-center gap-3">
-                                    <input class="form-check-input m-0 payment-radio" type="radio" name="metode_pembayaran" value="Transfer Bank BCA" checked>
-                                    <div>
-                                        <div class="fw-bold text-dark"><i class="bi bi-bank me-2 text-primary"></i>Transfer Bank BCA</div>
-                                        <div class="text-muted small">No. Rek: 8830-1928-33 a.n. PT PustakaKu Indonesia</div>
-                                    </div>
-                                </div>
-                                <span class="badge bg-light text-dark border">Otomatis / Manual</span>
-                            </label>
-
-                            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between gap-3 payment-card" style="cursor: pointer;">
-                                <div class="d-flex align-items-center gap-3">
-                                    <input class="form-check-input m-0 payment-radio" type="radio" name="metode_pembayaran" value="Transfer Bank Mandiri">
-                                    <div>
-                                        <div class="fw-bold text-dark"><i class="bi bi-bank me-2 text-warning"></i>Transfer Bank Mandiri</div>
-                                        <div class="text-muted small">No. Rek: 137-00-9821-443 a.n. PT PustakaKu Indonesia</div>
-                                    </div>
-                                </div>
-                                <span class="badge bg-light text-dark border">Transfer Bank</span>
-                            </label>
-
-                            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between gap-3 payment-card" style="cursor: pointer;">
-                                <div class="d-flex align-items-center gap-3">
-                                    <input class="form-check-input m-0 payment-radio" type="radio" name="metode_pembayaran" value="Transfer Bank BRI">
-                                    <div>
-                                        <div class="fw-bold text-dark"><i class="bi bi-bank me-2 text-info"></i>Transfer Bank BRI</div>
-                                        <div class="text-muted small">No. Rek: 0206-01-002341-30 a.n. PT PustakaKu Indonesia</div>
-                                    </div>
-                                </div>
-                                <span class="badge bg-light text-dark border">Transfer Bank</span>
-                            </label>
-
-                            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between gap-3 payment-card" style="cursor: pointer;">
-                                <div class="d-flex align-items-center gap-3">
-                                    <input class="form-check-input m-0 payment-radio" type="radio" name="metode_pembayaran" value="E-Wallet (GoPay / OVO / Dana / QRIS)">
-                                    <div>
-                                        <div class="fw-bold text-dark"><i class="bi bi-qr-code-scan me-2 text-success"></i>E-Wallet & QRIS</div>
-                                        <div class="text-muted small">GoPay, OVO, ShopeePay, Dana & Seluruh Bank QRIS</div>
-                                    </div>
-                                </div>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle">Instan</span>
-                            </label>
-
-                            <label class="border rounded-4 p-3 d-flex align-items-center justify-content-between gap-3 payment-card" style="cursor: pointer;">
-                                <div class="d-flex align-items-center gap-3">
-                                    <input class="form-check-input m-0 payment-radio" type="radio" name="metode_pembayaran" value="COD (Bayar di Tempat)">
-                                    <div>
-                                        <div class="fw-bold text-dark"><i class="bi bi-cash-stack me-2 text-secondary"></i>COD (Bayar di Tempat)</div>
-                                        <div class="text-muted small">Bayar tunai langsung saat kurir mengantarkan paket ke rumah Anda</div>
-                                    </div>
-                                </div>
-                                <span class="badge bg-secondary-subtle text-dark border">Bayar di Tempat</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <div class="bg-white border rounded-4 shadow-sm p-3 p-md-4">
-                        <div class="d-flex align-items-center gap-2 pb-3 border-bottom mb-3">
-                            <div class="rounded-circle bg-success-subtle text-success d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;"><i class="bi bi-chat-left-text fs-5"></i></div>
-                            <div>
-                                <h5 class="fw-bold text-dark mb-0">Catatan untuk Penjual</h5>
-                                <div class="text-muted small">Tuliskan pesan atau instruksi khusus untuk paket Anda (opsional)</div>
-                            </div>
-                        </div>
-
-                        <textarea class="form-control rounded-3" id="catatan_pembeli" name="catatan_pembeli" rows="3" placeholder="Contoh: Titipkan di satpam jika tidak ada orang di rumah / tolong packing kardus tebal"></textarea>
+                        <textarea class="form-control rounded-3" id="catatan_pembeli" name="catatan_pembeli" rows="2" placeholder="Tuliskan catatan khusus untuk penjual (misal: mohon packing kardus tebal)"></textarea>
                     </div>
                 </div>
 
                 <div class="col-12 col-lg-4">
-                    <div class="bg-white border rounded-4 shadow-sm p-3 p-md-4 mb-3">
+                    <div class="card border-0 shadow-sm rounded-4 p-4 bg-white checkout-sticky-summary">
                         <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-3">
-                            <h5 class="fw-bold text-dark mb-0">Ringkasan Pesanan</h5>
-                            <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 fw-semibold"><?= count($items); ?> Judul</span>
+                            <h6 class="fw-bold text-dark mb-0 fs-6">Ringkasan Pesanan</h6>
+                            <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1 small"><?= count($items); ?> Item</span>
                         </div>
 
-                        <div class="checkout-items-list mb-3" style="max-height: 280px; overflow-y: auto;">
+                        <div class="checkout-items-list mb-3" style="max-height: 240px; overflow-y: auto;">
                             <?php foreach ($items as $it): ?>
+                                <?php $thumb_img = resolveImageUrl($it['gambar'], 'buku'); ?>
                                 <div class="d-flex align-items-center gap-3 py-2 border-bottom">
-                                    <img src="<?= htmlspecialchars($it['gambar']); ?>" alt="<?= htmlspecialchars($it['judul']); ?>" class="rounded-3 border object-fit-cover flex-shrink-0" style="width: 48px; height: 64px;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
+                                    <img src="<?= htmlspecialchars($thumb_img); ?>" alt="<?= htmlspecialchars($it['judul']); ?>" class="rounded-3 border object-fit-cover flex-shrink-0" style="width: 44px; height: 58px;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                                     <div class="min-w-0 flex-grow-1">
                                         <div class="fw-semibold text-dark text-truncate small" title="<?= htmlspecialchars($it['judul']); ?>"><?= htmlspecialchars($it['judul']); ?></div>
                                         <div class="text-muted" style="font-size: 11px;"><?= (int) $it['qty']; ?> x <?= formatRupiah($it['satuan']); ?></div>
@@ -285,52 +290,169 @@
                         </div>
 
                         <div class="d-flex justify-content-between mb-2 small text-secondary">
-                            <span>Total Harga Buku</span>
-                            <span class="text-dark fw-semibold"><?= formatRupiah($total_normal); ?></span>
+                            <span>Subtotal Buku</span>
+                            <span class="text-dark fw-semibold" id="labelSubtotalBuku"><?= formatRupiah($total_buku); ?></span>
                         </div>
 
                         <?php if ($total_hemat > 0): ?>
                             <div class="d-flex justify-content-between mb-2 small text-success">
-                                <span>Total Diskon Produk</span>
+                                <span>Hemat Diskon</span>
                                 <span class="fw-semibold">-<?= formatRupiah($total_hemat); ?></span>
                             </div>
                         <?php endif; ?>
 
                         <div class="d-flex justify-content-between mb-2 small text-secondary">
-                            <span>Subtotal Buku</span>
-                            <span class="text-dark fw-semibold" id="labelSubtotalBuku"><?= formatRupiah($total_buku); ?></span>
-                        </div>
-
-                        <div class="d-flex justify-content-between mb-2 small text-secondary">
                             <span>Ongkos Kirim</span>
-                            <span class="text-dark fw-semibold" id="labelOngkir"><?= $ongkir_reguler === 0 ? 'GRATIS' : formatRupiah($ongkir_reguler); ?></span>
+                            <span class="text-dark fw-semibold" id="labelOngkir"><?= formatRupiah($initial_cost); ?></span>
                         </div>
 
-                        <?php if ($dapat_gratis_ongkir): ?>
-                            <div class="d-flex justify-content-between mb-3 small text-success">
-                                <span><i class="bi bi-tag-fill me-1"></i>Subsidi Gratis Ongkir</span>
-                                <span class="fw-semibold">-Rp 15.000</span>
-                            </div>
-                        <?php endif; ?>
+                        <div class="d-flex justify-content-between mb-3 small text-muted" style="font-size: 11px;">
+                            <span>Layanan:</span>
+                            <span class="text-dark fw-semibold text-truncate" id="labelLayananKurir" style="max-width: 170px;"><?= htmlspecialchars($initial_service_name); ?></span>
+                        </div>
 
                         <hr class="my-3">
 
                         <div class="d-flex align-items-center justify-content-between mb-3">
-                            <span class="fw-bold text-dark fs-6">Total Pembayaran</span>
+                            <span class="fw-bold text-dark fs-6">Total Tagihan</span>
                             <span class="fw-bold text-success fs-4" id="labelTotalBayar"><?= formatRupiah($total_bayar); ?></span>
                         </div>
 
-                        <input type="hidden" name="ongkos_kirim" id="inputOngkir" value="<?= $ongkir_reguler; ?>">
-
-                        <button type="submit" class="btn btn-success w-100 rounded-pill py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnProsesPesanan">
-                            <i class="bi bi-shield-check fs-5"></i>
-                            <span>Bayar & Buat Pesanan</span>
+                        <button type="submit" class="btn btn-success w-100 rounded-pill py-3 fw-bold fs-6 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnSubmitCheckout">
+                            <i class="bi bi-shield-lock-fill fs-5"></i>
+                            <span>Bayar Sekarang</span>
                         </button>
+
+                        <div class="text-center text-muted small mt-3 d-flex align-items-center justify-content-center gap-1" style="font-size: 11px;">
+                            <i class="bi bi-shield-check text-success fs-6"></i>
+                            <span>100% Pembayaran Aman & Terenkripsi</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </form>
     </main>
+
+    <?php if (!empty($alamat_list)): ?>
+        <div class="modal fade" id="modalPilihAlamat" tabindex="-1" aria-labelledby="modalPilihAlamatLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content rounded-4 border-0 shadow">
+                    <div class="modal-header border-bottom">
+                        <h6 class="modal-title fw-bold text-dark" id="modalPilihAlamatLabel"><i class="bi bi-geo-alt-fill text-success me-2"></i>Pilih Alamat Pengiriman</h6>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="d-flex flex-column gap-2 mb-3">
+                            <?php foreach ($alamat_list as $al): ?>
+                                <?php 
+                                    $is_checked = ($selected_alamat && (int)$selected_alamat['id'] === (int)$al['id']); 
+                                    $al_kec = !empty($al['kecamatan']) ? 'Kec. ' . $al['kecamatan'] . ', ' : '';
+                                    $al_baris2 = $al_kec . $al['kota_nama'] . ', ' . $al['provinsi_nama'] . ' ' . $al['kode_pos'];
+                                    $al_full = $al['alamat_lengkap'] . ', ' . $al_baris2;
+                                ?>
+                                <label class="border rounded-4 p-3 d-flex align-items-start gap-3 cursor-pointer modal-address-card <?= $is_checked ? 'border-success bg-success-subtle bg-opacity-25' : ''; ?>" style="cursor: pointer;">
+                                    <input class="form-check-input mt-1 modal-address-radio" type="radio" name="modal_pilih_alamat" value="<?= (int)$al['id']; ?>" data-city-id="<?= (int)$al['kota_id']; ?>" data-label="<?= htmlspecialchars($al['label_alamat']); ?>" data-nama="<?= htmlspecialchars($al['nama_penerima']); ?>" data-telp="<?= htmlspecialchars($al['no_telepon']); ?>" data-baris1="<?= htmlspecialchars($al['alamat_lengkap']); ?>" data-baris2="<?= htmlspecialchars($al_baris2); ?>" data-full="<?= htmlspecialchars($al_full); ?>" <?= $is_checked ? 'checked' : ''; ?>>
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <span class="badge <?= ($al['is_primary'] == 1) ? 'bg-success' : 'bg-secondary'; ?> rounded-pill px-2 py-1 small"><?= htmlspecialchars($al['label_alamat']); ?></span>
+                                            <span class="fw-bold text-dark small"><?= htmlspecialchars($al['nama_penerima']); ?> (<?= htmlspecialchars($al['no_telepon']); ?>)</span>
+                                        </div>
+                                        <div class="text-secondary small"><?= htmlspecialchars($al['alamat_lengkap']); ?></div>
+                                        <div class="text-muted small"><?= htmlspecialchars($al_baris2); ?></div>
+                                    </div>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top bg-light justify-content-between">
+                        <button type="button" class="btn btn-outline-success rounded-pill btn-sm px-3 fw-semibold" id="btnBukaModalTambahAlamat">
+                            <i class="bi bi-plus-lg me-1"></i>Tambah Alamat Baru
+                        </button>
+                        <button type="button" class="btn btn-success rounded-pill btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Gunakan Alamat Ini</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <div class="modal fade" id="modalTambahAlamatCheckout" tabindex="-1" aria-labelledby="modalTambahAlamatCheckoutLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-bottom">
+                    <h6 class="modal-title fw-bold text-dark" id="modalTambahAlamatCheckoutLabel"><i class="bi bi-geo-alt-fill text-success me-2"></i>Tambah Alamat Pengiriman Baru</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="proses_alamat.php" method="POST">
+                    <input type="hidden" name="aksi" value="tambah">
+                    <input type="hidden" name="redirect" value="checkout.php">
+                    <input type="hidden" name="provinsi_nama" id="co_modal_provinsi_nama" value="">
+                    <input type="hidden" name="kota_nama" id="co_modal_kota_nama" value="">
+
+                    <div class="modal-body p-4">
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-semibold text-secondary">Label Alamat <span class="text-danger">*</span></label>
+                                <input type="text" name="label_alamat" class="form-control rounded-3" placeholder="Contoh: Rumah, Kantor" required value="Rumah">
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-semibold text-secondary">Nama Penerima <span class="text-danger">*</span></label>
+                                <input type="text" name="nama_penerima" class="form-control rounded-3" value="<?= htmlspecialchars($user['nama_lengkap']); ?>" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-semibold text-secondary">Nomor Telepon <span class="text-danger">*</span></label>
+                                <input type="tel" name="no_telepon" class="form-control rounded-3" value="<?= htmlspecialchars($user['no_telepon'] ?? ''); ?>" required placeholder="08xxxxxxxxxx">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Provinsi <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-3" name="provinsi_id" id="co_modal_provinsi_id" required>
+                                    <option value="">-- Pilih Provinsi --</option>
+                                    <?php foreach ($provinces as $prov): ?>
+                                        <option value="<?= (int)$prov['province_id']; ?>" data-name="<?= htmlspecialchars($prov['province']); ?>"><?= htmlspecialchars($prov['province']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Kota / Kabupaten <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-3" name="kota_id" id="co_modal_kota_id" required disabled>
+                                    <option value="">-- Pilih Provinsi Terlebih Dahulu --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Kecamatan</label>
+                                <input type="text" name="kecamatan" class="form-control rounded-3" placeholder="Contoh: Sukolilo / Gambir">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Kode Pos</label>
+                                <input type="text" name="kode_pos" id="co_modal_kode_pos" class="form-control rounded-3" placeholder="Contoh: 60111">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-secondary">Alamat Lengkap <span class="text-danger">*</span></label>
+                            <textarea name="alamat_lengkap" class="form-control rounded-3" rows="3" placeholder="Nama jalan, nomor rumah, patokan lokasi" required></textarea>
+                        </div>
+
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_primary" value="1" id="co_modal_is_primary" checked>
+                            <label class="form-check-label small text-muted" for="co_modal_is_primary">
+                                Jadikan sebagai alamat utama & gunakan untuk pesanan ini
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top bg-light">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success rounded-pill px-4 fw-semibold"><i class="bi bi-save me-1"></i>Simpan & Gunakan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <?php include(__DIR__ . '/layouts/footer.php'); ?>
 
@@ -338,57 +460,287 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const totalBuku = <?= (float) $total_buku; ?>;
-            const shippingRadios = document.querySelectorAll('.shipping-radio');
+            const inputAlamatId = document.getElementById('inputAlamatId');
+            const inputNamaPenerima = document.getElementById('inputNamaPenerima');
+            const inputNoTelepon = document.getElementById('inputNoTelepon');
+            const inputAlamatPengiriman = document.getElementById('inputAlamatPengiriman');
+            const currentCityId = document.getElementById('currentCityId');
+            const totalBeratPaket = document.getElementById('totalBeratPaket');
+            const inputOngkir = document.getElementById('inputOngkir');
+            const inputKurirService = document.getElementById('inputKurirService');
             const labelOngkir = document.getElementById('labelOngkir');
             const labelTotalBayar = document.getElementById('labelTotalBayar');
-            const inputOngkir = document.getElementById('inputOngkir');
+            const labelLayananKurir = document.getElementById('labelLayananKurir');
+            const shippingServicesList = document.getElementById('shippingServicesList');
+            const formCheckout = document.getElementById('formCheckout');
+            const btnSubmit = document.getElementById('btnSubmitCheckout');
 
             function formatRupiahJS(angka) {
-                return 'Rp ' + angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                return 'Rp ' + Number(angka).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
             }
 
-            shippingRadios.forEach(function (radio) {
+            function updateShippingCosts() {
+                const cityId = currentCityId.value || '501';
+                const weight = totalBeratPaket.value || '1000';
+                const selectedCourier = document.querySelector('input[name="pilih_kurir"]:checked');
+                const courier = selectedCourier ? selectedCourier.value : 'jne';
+
+                shippingServicesList.innerHTML = '<div class="text-center py-3 text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Menghitung ongkir...</div>';
+
+                fetch('api/rajaongkir.php?action=cost&city_id=' + encodeURIComponent(cityId) + '&weight=' + encodeURIComponent(weight) + '&courier=' + encodeURIComponent(courier))
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
+                            shippingServicesList.innerHTML = '';
+                            res.data.forEach((srv, index) => {
+                                const isChecked = (index === 0);
+                                const serviceCard = document.createElement('label');
+                                serviceCard.className = 'border rounded-4 p-3 d-flex align-items-center justify-content-between gap-3 cursor-pointer service-card ' + (isChecked ? 'border-success bg-success-subtle bg-opacity-25' : '');
+                                serviceCard.style.cursor = 'pointer';
+
+                                const serviceTitle = srv.service_name || (srv.service + (srv.description ? ' - ' + srv.description : ''));
+                                const serviceEtd = srv.etd || '-';
+
+                                serviceCard.innerHTML = `
+                                    <div class="d-flex align-items-center gap-3">
+                                        <input class="form-check-input m-0 service-radio" type="radio" name="service_choice" value="${srv.cost}" data-name="${serviceTitle}" ${isChecked ? 'checked' : ''}>
+                                        <div>
+                                            <div class="fw-bold text-dark small">${serviceTitle}</div>
+                                            <div class="text-muted" style="font-size: 11px;"><i class="bi bi-clock-history me-1"></i>Estimasi tiba: ${serviceEtd}</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold text-success">${formatRupiahJS(srv.cost)}</div>
+                                    </div>
+                                `;
+
+                                shippingServicesList.appendChild(serviceCard);
+
+                                if (isChecked) {
+                                    applySelectedService(srv.cost, serviceTitle);
+                                }
+                            });
+
+                            bindServiceRadioEvents();
+                        } else {
+                            shippingServicesList.innerHTML = '<div class="alert alert-warning small rounded-3 p-2 mb-0">Layanan pengiriman standar digunakan.</div>';
+                            applySelectedService(12000, 'Kurir Reguler Standar');
+                        }
+                    })
+                    .catch(() => {
+                        shippingServicesList.innerHTML = '<div class="alert alert-warning small rounded-3 p-2 mb-0">Tarif standar digunakan.</div>';
+                        applySelectedService(12000, 'Kurir Reguler Standar');
+                    });
+            }
+
+            function applySelectedService(cost, name) {
+                const numericCost = parseFloat(cost) || 0;
+                inputOngkir.value = numericCost;
+                inputKurirService.value = name;
+                labelOngkir.textContent = formatRupiahJS(numericCost);
+                labelLayananKurir.textContent = name;
+                labelTotalBayar.textContent = formatRupiahJS(totalBuku + numericCost);
+            }
+
+            function bindServiceRadioEvents() {
+                const radios = document.querySelectorAll('.service-radio');
+                radios.forEach(radio => {
+                    radio.addEventListener('change', function () {
+                        document.querySelectorAll('.service-card').forEach(c => {
+                            c.classList.remove('border-success', 'bg-success-subtle', 'bg-opacity-25');
+                        });
+                        const parent = this.closest('.service-card');
+                        if (parent) {
+                            parent.classList.add('border-success', 'bg-success-subtle', 'bg-opacity-25');
+                        }
+                        applySelectedService(this.value, this.getAttribute('data-name'));
+                    });
+                });
+            }
+
+            const modalAddressRadios = document.querySelectorAll('.modal-address-radio');
+            modalAddressRadios.forEach(radio => {
                 radio.addEventListener('change', function () {
-                    document.querySelectorAll('.shipping-card').forEach(function (c) {
+                    document.querySelectorAll('.modal-address-card').forEach(c => {
                         c.classList.remove('border-success', 'bg-success-subtle', 'bg-opacity-25');
                     });
-                    const parentCard = this.closest('.shipping-card');
-                    if (parentCard) {
-                        parentCard.classList.add('border-success', 'bg-success-subtle', 'bg-opacity-25');
+                    const parent = this.closest('.modal-address-card');
+                    if (parent) {
+                        parent.classList.add('border-success', 'bg-success-subtle', 'bg-opacity-25');
                     }
 
-                    const ongkir = parseFloat(this.dataset.ongkir) || 0;
-                    inputOngkir.value = ongkir;
-                    labelOngkir.textContent = ongkir === 0 ? 'GRATIS' : formatRupiahJS(ongkir);
-                    labelTotalBayar.textContent = formatRupiahJS(totalBuku + ongkir);
+                    if (inputAlamatId) inputAlamatId.value = this.value;
+                    if (inputNamaPenerima) inputNamaPenerima.value = this.getAttribute('data-nama');
+                    if (inputNoTelepon) inputNoTelepon.value = this.getAttribute('data-telp');
+                    if (inputAlamatPengiriman) inputAlamatPengiriman.value = this.getAttribute('data-full');
+
+                    const dispNamaTelp = document.getElementById('displayNamaTelp');
+                    if (dispNamaTelp) dispNamaTelp.textContent = this.getAttribute('data-nama') + ' (' + this.getAttribute('data-telp') + ')';
+                    const dispBaris1 = document.getElementById('displayAlamatBaris1');
+                    if (dispBaris1) dispBaris1.textContent = this.getAttribute('data-baris1');
+                    const dispBaris2 = document.getElementById('displayAlamatBaris2');
+                    if (dispBaris2) dispBaris2.textContent = this.getAttribute('data-baris2');
+
+                    const newCityId = this.getAttribute('data-city-id');
+                    if (newCityId) {
+                        currentCityId.value = newCityId;
+                        updateShippingCosts();
+                    }
                 });
             });
 
-            const paymentRadios = document.querySelectorAll('.payment-radio');
-            paymentRadios.forEach(function (radio) {
-                radio.addEventListener('change', function () {
-                    document.querySelectorAll('.payment-card').forEach(function (c) {
-                        c.classList.remove('border-success', 'bg-success-subtle', 'bg-opacity-25');
-                    });
-                    const parentCard = this.closest('.payment-card');
-                    if (parentCard) {
-                        parentCard.classList.add('border-success', 'bg-success-subtle', 'bg-opacity-25');
-                    }
+            const courierRadios = document.querySelectorAll('.courier-choice');
+            courierRadios.forEach(r => {
+                r.addEventListener('change', function () {
+                    updateShippingCosts();
                 });
             });
 
-            const formCheckout = document.getElementById('formCheckout');
-            if (formCheckout) {
+            bindServiceRadioEvents();
+
+            const coSelectProv = document.getElementById('co_modal_provinsi_id');
+            const coSelectKota = document.getElementById('co_modal_kota_id');
+            const coHiddenProv = document.getElementById('co_modal_provinsi_nama');
+            const coHiddenKota = document.getElementById('co_modal_kota_nama');
+            const coInputPos = document.getElementById('co_modal_kode_pos');
+
+            if (coSelectProv && coSelectKota) {
+                coSelectProv.addEventListener('change', function () {
+                    const provId = this.value;
+                    const opt = this.options[this.selectedIndex];
+                    coHiddenProv.value = opt ? opt.getAttribute('data-name') : '';
+
+                    coSelectKota.innerHTML = '<option value="">Memuat kota...</option>';
+                    coSelectKota.disabled = true;
+
+                    if (!provId) {
+                        coSelectKota.innerHTML = '<option value="">-- Pilih Provinsi Terlebih Dahulu --</option>';
+                        return;
+                    }
+
+                    fetch('api/rajaongkir.php?action=cities&province_id=' + encodeURIComponent(provId))
+                        .then(r => r.json())
+                        .then(res => {
+                            if (res.ok && Array.isArray(res.data)) {
+                                coSelectKota.innerHTML = '<option value="">-- Pilih Kota / Kabupaten --</option>';
+                                res.data.forEach(item => {
+                                    const o = document.createElement('option');
+                                    o.value = item.city_id;
+                                    o.setAttribute('data-name', item.type + ' ' + item.city_name);
+                                    o.setAttribute('data-postal', item.postal_code || '');
+                                    o.textContent = item.type + ' ' + item.city_name;
+                                    coSelectKota.appendChild(o);
+                                });
+                                coSelectKota.disabled = false;
+                            } else {
+                                coSelectKota.innerHTML = '<option value="">Gagal memuat kota</option>';
+                            }
+                        })
+                        .catch(() => {
+                            coSelectKota.innerHTML = '<option value="">Gagal memuat kota</option>';
+                        });
+                });
+
+                coSelectKota.addEventListener('change', function () {
+                    const opt = this.options[this.selectedIndex];
+                    if (opt) {
+                        coHiddenKota.value = opt.getAttribute('data-name') || '';
+                        const pos = opt.getAttribute('data-postal');
+                        if (pos && coInputPos && !coInputPos.value) {
+                            coInputPos.value = pos;
+                        }
+                    }
+                });
+            }
+
+            const btnBukaTambah = document.getElementById('btnBukaModalTambahAlamat');
+            if (btnBukaTambah) {
+                btnBukaTambah.addEventListener('click', function () {
+                    const modalPilihEl = document.getElementById('modalPilihAlamat');
+                    const modalTambahEl = document.getElementById('modalTambahAlamatCheckout');
+                    if (modalPilihEl) {
+                        const modalPilihInst = bootstrap.Modal.getInstance(modalPilihEl) || new bootstrap.Modal(modalPilihEl);
+                        modalPilihInst.hide();
+                    }
+                    setTimeout(() => {
+                        if (modalTambahEl) {
+                            const modalTambahInst = new bootstrap.Modal(modalTambahEl);
+                            modalTambahInst.show();
+                        }
+                    }, 250);
+                });
+            }
+
+            document.addEventListener('hidden.bs.modal', function () {
+                setTimeout(() => {
+                    const openModals = document.querySelectorAll('.modal.show');
+                    if (openModals.length === 0) {
+                        document.querySelectorAll('.modal-backdrop').forEach(b => b.remove());
+                        document.body.classList.remove('modal-open');
+                        document.body.style.removeProperty('padding-right');
+                        document.body.style.removeProperty('overflow');
+                    }
+                }, 150);
+            });
+
+            if (formCheckout && btnSubmit) {
                 formCheckout.addEventListener('submit', function (e) {
-                    const btn = document.getElementById('btnProsesPesanan');
-                    if (btn) {
-                        btn.disabled = true;
-                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses Pesanan...';
-                    }
+                    e.preventDefault();
+
+                    btnSubmit.disabled = true;
+                    btnSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Memproses Pesanan...';
+
+                    const formData = new FormData(formCheckout);
+
+                    fetch('proses_checkout.php?ajax=1', {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'Accept': 'application/json' }
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (!data.ok) {
+                            alert(data.message || 'Terjadi kesalahan saat memproses pesanan.');
+                            btnSubmit.disabled = false;
+                            btnSubmit.innerHTML = '<i class="bi bi-shield-lock-fill fs-5"></i> <span>Bayar Sekarang</span>';
+                            if (data.redirect) {
+                                window.location.href = data.redirect;
+                            }
+                            return;
+                        }
+
+                        const snapToken = data.snap_token;
+                        const pesananId = data.pesanan_id;
+                        const nomorPesanan = data.nomor_pesanan || '';
+
+                        if (typeof snap !== 'undefined' && snapToken && !snapToken.startsWith('MOCK-SNAP')) {
+                            snap.pay(snapToken, {
+                                onSuccess: function (result) {
+                                    const orderNum = (result && result.order_id) ? result.order_id : nomorPesanan;
+                                    const transStatus = (result && result.transaction_status) ? result.transaction_status : 'settlement';
+                                    window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(orderNum) + '&transaction_status=' + encodeURIComponent(transStatus);
+                                },
+                                onPending: function (result) {
+                                    const orderNum = (result && result.order_id) ? result.order_id : nomorPesanan;
+                                    window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(orderNum) + '&transaction_status=pending';
+                                },
+                                onError: function () {
+                                    window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(nomorPesanan) + '&transaction_status=failure';
+                                },
+                                onClose: function () {
+                                    window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(nomorPesanan);
+                                }
+                            });
+                        } else {
+                            window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(nomorPesanan) + '&transaction_status=settlement';
+                        }
+                    })
+                    .catch(() => {
+                        formCheckout.submit();
+                    });
                 });
             }
         });
     </script>
 </body>
 </html>
-

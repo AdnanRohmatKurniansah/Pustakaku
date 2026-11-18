@@ -1,0 +1,11 @@
+.git
+.github
+.env
+.env.example
+*.sql
+schema/
+tests/
+phpunit.xml
+.vscode
+.idea
+

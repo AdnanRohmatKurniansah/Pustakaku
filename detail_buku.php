@@ -104,7 +104,17 @@
     $persen = $ada_diskon ? round((($harga - $diskon) / $harga) * 100) : 0;
     $stok = (int)$buku['stok'];
     $habis = $stok <= 0;
-    $gambar = (!empty($buku['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $buku['gambar'])) ? ('assets/uploads/buku/' . $buku['gambar']) : 'assets/images/placeholder.png';
+    require_once __DIR__ . '/services/cloudinary_service.php';
+
+    $q_galeri = mysqli_query($conn, "SELECT * FROM buku_gambar WHERE buku_id = '$id' ORDER BY is_primary DESC, urutan ASC, id ASC");
+    $list_galeri = [];
+    while ($g = mysqli_fetch_assoc($q_galeri)) {
+        $list_galeri[] = resolveImageUrl($g['url_gambar'], 'buku');
+    }
+    if (empty($list_galeri)) {
+        $list_galeri[] = resolveImageUrl($buku['gambar'] ?? '', 'buku');
+    }
+    $gambar_utama = $list_galeri[0];
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -132,12 +142,22 @@
         <div class="row g-4 mb-5">
             <div class="col-12 col-md-5 col-lg-4">
                 <div class="card border-0 shadow-sm rounded-4 p-3 bg-white text-center position-sticky" style="top: 150px;">
-                    <div class="detail-book-cover mb-3 position-relative overflow-hidden rounded-3">
+                    <div class="detail-book-cover mb-3 position-relative overflow-hidden rounded-3 bg-light p-2">
                         <?php if ($ada_diskon): ?>
                             <span class="badge bg-danger position-absolute top-0 start-0 m-2 px-3 py-2 rounded-pill fw-bold shadow-sm">-<?= $persen; ?>%</span>
                         <?php endif; ?>
-                        <img src="<?= htmlspecialchars($gambar); ?>" alt="<?= htmlspecialchars($buku['judul']); ?>" class="img-fluid rounded-3 shadow-sm" style="max-height: 420px; object-fit: contain;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
+                        <img id="mainProductImage" src="<?= htmlspecialchars($gambar_utama); ?>" alt="<?= htmlspecialchars($buku['judul']); ?>" class="img-fluid rounded-3 shadow-sm transition" style="max-height: 400px; object-fit: contain;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                     </div>
+
+                    <?php if (count($list_galeri) > 1): ?>
+                        <div class="d-flex gap-2 overflow-x-auto pb-2 justify-content-center">
+                            <?php foreach ($list_galeri as $idx => $thumb): ?>
+                                <button type="button" class="btn p-0 border <?= $idx === 0 ? 'border-success border-2' : ''; ?> rounded-2 detail-thumb" style="width: 58px; height: 75px; flex-shrink: 0; overflow: hidden;" onclick="document.getElementById('mainProductImage').src = '<?= htmlspecialchars($thumb); ?>'; document.querySelectorAll('.detail-thumb').forEach(function(b){b.classList.remove('border-success', 'border-2');}); this.classList.add('border-success', 'border-2');">
+                                    <img src="<?= htmlspecialchars($thumb); ?>" alt="Thumb" class="w-100 h-100 object-fit-cover" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
+                                </button>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -358,7 +378,7 @@
                             $h_bt = (float)$bt['harga'];
                             $d_bt = (float)$bt['harga_diskon'];
                             $ada_d_bt = $d_bt > 0 && $d_bt < $h_bt;
-                            $img_bt = (!empty($bt['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $bt['gambar'])) ? ('assets/uploads/buku/' . $bt['gambar']) : 'assets/images/placeholder.png';
+                            $img_bt = resolveImageUrl($bt['gambar'] ?? '', 'buku');
                         ?>
                         <div class="col">
                             <div class="product-card h-100">

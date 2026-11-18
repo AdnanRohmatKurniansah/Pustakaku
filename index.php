@@ -1,6 +1,7 @@
 <?php
     session_start();
     require_once __DIR__ . '/config/database.php';
+    require_once __DIR__ . '/services/cloudinary_service.php';
 
     $kategori_filters = [
         1 => 'Fiksi',
@@ -31,7 +32,7 @@
             $harga_normal = (float)$row['harga'];
             $harga_diskon = (float)$row['harga_diskon'];
             $disc_pct = ($harga_normal > 0) ? round((($harga_normal - $harga_diskon) / $harga_normal) * 100) : 0;
-            $fs_img = (!empty($row['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $row['gambar'])) ? ('assets/uploads/buku/' . $row['gambar']) : 'assets/images/placeholder.png';
+            $fs_img = resolveImageUrl($row['gambar'] ?? '', 'buku');
             $flash_sale_items[] = [
                 'id' => $row['id'],
                 'judul' => $row['judul'],
@@ -58,7 +59,7 @@
     $bb_res = mysqli_query($conn, $sql_bb);
     if ($bb_res) {
         while ($row = mysqli_fetch_assoc($bb_res)) {
-            $bb_img = (!empty($row['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $row['gambar'])) ? ('assets/uploads/buku/' . $row['gambar']) : 'assets/images/placeholder.png';
+            $bb_img = resolveImageUrl($row['gambar'] ?? '', 'buku');
             $buku_baru[] = [
                 'id' => $row['id'],
                 'kategori_id' => (int)$row['kategori_id'],
@@ -262,7 +263,7 @@
                 <?php foreach ($kategori_display as $kat): ?>
                     <div class="col">
                         <a href="katalog.php?kategori=<?= (int)$kat['id']; ?>" class="category-card shadow-sm h-100">
-                            <img src="<?= (!empty($kat['gambar']) && file_exists(__DIR__ . '/assets/uploads/kategori/' . $kat['gambar'])) ? ('assets/uploads/kategori/' . htmlspecialchars($kat['gambar'])) : 'assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($kat['nama']); ?>" class="category-circle-img" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
+                            <img src="<?= resolveImageUrl($kat['gambar'] ?? '', 'kategori'); ?>" alt="<?= htmlspecialchars($kat['nama']); ?>" class="category-circle-img" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
                             <p class="category-name"><?= htmlspecialchars($kat['nama']); ?></p>
                         </a>
                     </div>

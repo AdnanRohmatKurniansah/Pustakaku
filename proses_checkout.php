@@ -3,53 +3,92 @@
 
     require_once __DIR__ . '/config/database.php';
     require_once __DIR__ . '/cart/proses_keranjang.php';
+    require_once __DIR__ . '/services/midtrans_service.php';
+    require_once __DIR__ . '/services/email_service.php';
+
+    $is_ajax = (!empty($_GET['ajax']) || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false));
 
     if (!isset($_SESSION['user_id'])) {
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'message' => 'Silakan masuk ke akun Anda terlebih dahulu.', 'redirect' => 'auth/login.php']);
+            exit();
+        }
         $_SESSION['error'] = 'Silakan masuk ke akun Anda terlebih dahulu.';
         header('Location: auth/login.php');
-        exit;
+        exit();
     }
 
     if (($_SESSION['role'] ?? '') === 'admin') {
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'message' => 'Akun admin tidak dapat melakukan pesanan.', 'redirect' => 'admin/index.php']);
+            exit();
+        }
         $_SESSION['error'] = 'Akun admin tidak dapat melakukan pesanan.';
         header('Location: admin/index.php');
-        exit;
+        exit();
     }
 
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'message' => 'Metode request tidak diizinkan.']);
+            exit();
+        }
         header('Location: keranjang.php');
-        exit;
+        exit();
     }
 
     $user_id = (int) $_SESSION['user_id'];
+    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, no_telepon FROM users WHERE id = '$user_id' LIMIT 1");
+    $user_data = $q_user ? mysqli_fetch_assoc($q_user) : null;
 
+    $alamat_id = (int) ($_POST['alamat_id'] ?? 0);
     $nama_penerima = trim($_POST['nama_penerima'] ?? '');
     $no_telepon = trim($_POST['no_telepon'] ?? '');
     $alamat_pengiriman = trim($_POST['alamat_pengiriman'] ?? '');
-    $metode_pembayaran = trim($_POST['metode_pembayaran'] ?? '');
-    $opsi_pengiriman = trim($_POST['opsi_pengiriman'] ?? 'reguler');
+    $kurir_service = trim($_POST['kurir_service'] ?? 'Kurir Reguler');
+    $ongkos_kirim = (float) ($_POST['ongkos_kirim'] ?? 0);
+    $metode_pembayaran = trim($_POST['metode_pembayaran'] ?? 'Midtrans');
     $catatan_pembeli = trim($_POST['catatan_pembeli'] ?? '');
-    $simpan_ke_profil = !empty($_POST['simpan_ke_profil']);
 
-    if (empty($nama_penerima) || empty($no_telepon) || empty($alamat_pengiriman) || empty($metode_pembayaran)) {
-        $_SESSION['error'] = 'Nama penerima, nomor telepon, alamat pengiriman, dan metode pembayaran wajib diisi!';
-        header('Location: checkout.php');
-        exit;
+    if ($alamat_id > 0) {
+        $q_al = mysqli_query($conn, "SELECT * FROM user_alamat WHERE id = '$alamat_id' AND user_id = '$user_id' LIMIT 1");
+        if ($q_al && mysqli_num_rows($q_al) > 0) {
+            $al_row = mysqli_fetch_assoc($q_al);
+            $nama_penerima = $al_row['nama_penerima'];
+            $no_telepon = $al_row['no_telepon'];
+            $kec_txt = !empty($al_row['kecamatan']) ? 'Kec. ' . $al_row['kecamatan'] . ', ' : '';
+            $alamat_pengiriman = $al_row['alamat_lengkap'] . ', ' . $kec_txt . $al_row['kota_nama'] . ', ' . $al_row['provinsi_nama'] . ' ' . $al_row['kode_pos'];
+        }
     }
 
-    if ($simpan_ke_profil) {
-        $telp_user_esc = mysqli_real_escape_string($conn, $no_telepon);
-        $alamat_user_esc = mysqli_real_escape_string($conn, $alamat_pengiriman);
-        mysqli_query($conn, "UPDATE users SET no_telepon = '$telp_user_esc', alamat_lengkap = '$alamat_user_esc', updated_at = NOW() WHERE id = '$user_id'");
+    if (empty($nama_penerima) || empty($no_telepon) || empty($alamat_pengiriman)) {
+        $err_msg = 'Nama penerima, nomor telepon, dan alamat pengiriman wajib diisi!';
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'message' => $err_msg]);
+            exit();
+        }
+        $_SESSION['error'] = $err_msg;
+        header('Location: checkout.php');
+        exit();
     }
 
     $keranjang = cart_items($conn);
     $all_items = $keranjang['items'];
 
     if (empty($all_items)) {
-        $_SESSION['error'] = 'Keranjang belanja Anda kosong.';
+        $err_msg = 'Keranjang belanja Anda kosong.';
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'message' => $err_msg, 'redirect' => 'keranjang.php']);
+            exit();
+        }
+        $_SESSION['error'] = $err_msg;
         header('Location: keranjang.php');
-        exit;
+        exit();
     }
 
     $items = [];
@@ -72,15 +111,27 @@
         $buku_row = $q_stok ? mysqli_fetch_assoc($q_stok) : null;
 
         if (!$buku_row) {
-            $_SESSION['error'] = 'Salah satu buku yang Anda pesan tidak ditemukan.';
+            $err_msg = 'Salah satu buku yang Anda pesan tidak ditemukan.';
+            if ($is_ajax) {
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => false, 'message' => $err_msg]);
+                exit();
+            }
+            $_SESSION['error'] = $err_msg;
             header('Location: checkout.php');
-            exit;
+            exit();
         }
 
         if ($qty > (int) $buku_row['stok']) {
-            $_SESSION['error'] = 'Stok untuk buku "' . $buku_row['judul'] . '" tidak mencukupi (sisa: ' . $buku_row['stok'] . '). Silakan kurangi jumlah di keranjang.';
+            $err_msg = 'Stok untuk buku "' . $buku_row['judul'] . '" tidak mencukupi (sisa: ' . $buku_row['stok'] . '). Silakan sesuaikan jumlah di keranjang.';
+            if ($is_ajax) {
+                header('Content-Type: application/json');
+                echo json_encode(['ok' => false, 'message' => $err_msg]);
+                exit();
+            }
+            $_SESSION['error'] = $err_msg;
             header('Location: keranjang.php');
-            exit;
+            exit();
         }
     }
 
@@ -93,34 +144,73 @@
     }
 
     $potongan_diskon = max(0.0, $total_normal - $total_buku);
-
-    $dapat_gratis_ongkir = ($total_buku >= 150000);
-    $potongan_ongkir = $dapat_gratis_ongkir ? 15000.0 : 0.0;
-
-    if ($opsi_pengiriman === 'express') {
-        $ongkos_kirim = max(0.0, 25000.0 - $potongan_ongkir);
-    } else {
-        $ongkos_kirim = max(0.0, 15000.0 - $potongan_ongkir);
-    }
-
     $total_bayar = $total_buku + $ongkos_kirim;
 
     $nomor_pesanan = 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
     $alamat_pengiriman_lengkap = $nama_penerima . " (" . $no_telepon . ")\n" . $alamat_pengiriman;
 
+    $is_midtrans = (stripos($metode_pembayaran, 'Midtrans') !== false || true);
+    $status_pesanan = 'menunggu_pembayaran';
+
+    $customer_details = [
+        'nama' => $nama_penerima,
+        'email' => $user_data['email'] ?? 'pelanggan@pustakaku.com',
+        'telepon' => $no_telepon
+    ];
+
+    $item_details = [];
+    foreach ($items as $it) {
+        $item_details[] = [
+            'id' => (string) $it['id'],
+            'price' => (int) $it['satuan'],
+            'quantity' => (int) $it['qty'],
+            'name' => mb_substr($it['judul'], 0, 45)
+        ];
+    }
+
+    if ($ongkos_kirim > 0) {
+        $item_details[] = [
+            'id' => 'SHIPPING',
+            'price' => (int) $ongkos_kirim,
+            'quantity' => 1,
+            'name' => 'Ongkir (' . mb_substr($kurir_service, 0, 30) . ')'
+        ];
+    }
+
+    $snap_token = midtrans_create_snap_token($nomor_pesanan, $total_bayar, $customer_details, $item_details);
+
     $nomor_pesanan_esc = mysqli_real_escape_string($conn, $nomor_pesanan);
     $alamat_esc = mysqli_real_escape_string($conn, $alamat_pengiriman_lengkap);
-    $metode_esc = mysqli_real_escape_string($conn, $metode_pembayaran);
+    $metode_esc = mysqli_real_escape_string($conn, 'Midtrans');
+    $kurir_esc = mysqli_real_escape_string($conn, $kurir_service);
     $catatan_esc = mysqli_real_escape_string($conn, $catatan_pembeli);
+    $alamat_id_val = ($alamat_id > 0) ? "'$alamat_id'" : "NULL";
+    $snap_token_val = !empty($snap_token) ? "'" . mysqli_real_escape_string($conn, $snap_token) . "'" : "NULL";
 
-    $q_pesanan = "INSERT INTO pesanan (nomor_pesanan, user_id, voucher_id, total_buku, potongan_diskon, ongkos_kirim, total_bayar, status_pesanan, alamat_pengiriman, metode_pembayaran, catatan_pembeli, created_at, updated_at) VALUES ('$nomor_pesanan_esc', '$user_id', NULL, '$total_buku', '$potongan_diskon', '$ongkos_kirim', '$total_bayar', 'diproses', '$alamat_esc', '$metode_esc', '$catatan_esc', NOW(), NOW())";
+    $q_pesanan = "INSERT INTO pesanan (
+        nomor_pesanan, user_id, alamat_id, voucher_id, total_buku,
+        potongan_diskon, ongkos_kirim, kurir_service, total_bayar,
+        status_pesanan, alamat_pengiriman, metode_pembayaran,
+        snap_token, catatan_pembeli, created_at, updated_at
+    ) VALUES (
+        '$nomor_pesanan_esc', '$user_id', $alamat_id_val, NULL, '$total_buku',
+        '$potongan_diskon', '$ongkos_kirim', '$kurir_esc', '$total_bayar',
+        '$status_pesanan', '$alamat_esc', '$metode_esc',
+        $snap_token_val, '$catatan_esc', NOW(), NOW()
+    )";
 
     $insert_pesanan = mysqli_query($conn, $q_pesanan);
 
     if (!$insert_pesanan) {
-        $_SESSION['error'] = 'Terjadi kesalahan saat memproses pesanan Anda: ' . mysqli_error($conn);
+        $err_msg = 'Terjadi kesalahan saat memproses pesanan Anda: ' . mysqli_error($conn);
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'message' => $err_msg]);
+            exit();
+        }
+        $_SESSION['error'] = $err_msg;
         header('Location: checkout.php');
-        exit;
+        exit();
     }
 
     $pesanan_id = mysqli_insert_id($conn);
@@ -136,9 +226,24 @@
         mysqli_query($conn, "DELETE FROM keranjang WHERE user_id = '$user_id' AND buku_id = '$buku_id'");
     }
 
+    kirim_email_konfirmasi_pesanan($pesanan_id, $conn);
+
     unset($_SESSION['checkout_buku_ids']);
 
-    $_SESSION['success'] = 'Pembayaran berhasil! Pesanan ' . $nomor_pesanan . ' telah lunas dan sedang diproses oleh penjual.';
-    header('Location: pesanan_sukses.php?id=' . $pesanan_id);
-    exit;
+    $_SESSION['success'] = 'Pesanan ' . $nomor_pesanan . ' berhasil dibuat!';
 
+    if ($is_ajax) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'ok' => true,
+            'pesanan_id' => $pesanan_id,
+            'nomor_pesanan' => $nomor_pesanan,
+            'snap_token' => $snap_token,
+            'redirect_url' => 'pesanan_sukses.php?id=' . $pesanan_id
+        ]);
+        exit();
+    }
+
+    header('Location: pesanan_sukses.php?id=' . $pesanan_id);
+    exit();
+?>
