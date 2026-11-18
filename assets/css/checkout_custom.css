@@ -1,0 +1,83 @@
+/* Modern E-Commerce Styling for Checkout & Account (Tokopedia/Shopee Inspired) */
+
+:root {
+    --brand-primary: #198754;
+    --brand-primary-hover: #157347;
+    --brand-bg: #f8faf9;
+    --brand-border: #e9ecef;
+    --brand-card-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+body {
+    background-color: var(--brand-bg);
+}
+
+.card {
+    border: 1px solid var(--brand-border) !important;
+    border-radius: 16px !important;
+    box-shadow: var(--brand-card-shadow) !important;
+    transition: all 0.2s ease-in-out;
+}
+
+.modal-content {
+    border-radius: 20px !important;
+    border: 1px solid var(--brand-border) !important;
+}
+
+.modal-address-card {
+    transition: all 0.2s ease;
+    border-radius: 14px !important;
+}
+
+.modal-address-card:hover {
+    border-color: var(--brand-primary) !important;
+    background-color: rgba(25, 135, 84, 0.03);
+}
+
+.service-card {
+    transition: all 0.2s ease;
+    border-radius: 12px !important;
+}
+
+.service-card:hover {
+    border-color: var(--brand-primary) !important;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background-color: var(--brand-primary);
+    border-color: var(--brand-primary);
+    transition: all 0.2s ease;
+}
+
+.btn-success:hover, .btn-success:focus, .btn-success:active {
+    background-color: var(--brand-primary-hover) !important;
+    border-color: var(--brand-primary-hover) !important;
+    box-shadow: 0 4px 12px rgba(25, 135, 84, 0.25) !important;
+}
+
+.btn-outline-success {
+    color: var(--brand-primary);
+    border-color: var(--brand-primary);
+}
+
+.btn-outline-success:hover {
+    background-color: var(--brand-primary);
+    border-color: var(--brand-primary);
+    color: #ffffff;
+}
+
+.badge.bg-success-subtle {
+    background-color: #e8f5e9 !important;
+    color: #198754 !important;
+}
+
+/* Tokopedia-like sticky summary */
+@media (min-width: 992px) {
+    .checkout-sticky-summary {
+        position: sticky;
+        top: 90px;
+        z-index: 10;
+    }
+}
+

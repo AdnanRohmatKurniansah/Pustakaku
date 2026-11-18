@@ -49,7 +49,10 @@
                         </div>
 
                         <div class="mb-4">
-                            <label for="password" class="form-label small fw-semibold text-secondary">Kata Sandi <span class="text-danger">*</span></label>
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="password" class="form-label small fw-semibold text-secondary mb-0">Kata Sandi <span class="text-danger">*</span></label>
+                                <a href="lupa_password.php" class="small text-success text-decoration-none">Lupa kata sandi?</a>
+                            </div>
                             <input type="password" class="form-control form-control-custom" id="password" name="password" placeholder="Masukkan kata sandi Anda" required>
                         </div>
 
@@ -60,6 +63,19 @@
                             </button>
                         </div>
                     </form>
+
+                    <div class="d-flex align-items-center my-3">
+                        <hr class="flex-grow-1 my-0">
+                        <span class="px-3 small text-muted">atau</span>
+                        <hr class="flex-grow-1 my-0">
+                    </div>
+
+                    <div class="d-grid mb-3">
+                        <a href="google_login.php" class="btn btn-outline-dark d-flex align-items-center justify-content-center gap-2 py-2 fw-semibold rounded-3">
+                            <img width="20px" src="../assets/images/google.svg" alt="Google" class="img-fluid">
+                            <span>Masuk dengan Google</span>
+                        </a>
+                    </div>
 
                     <div class="text-center mt-3 pt-2 border-top">
                         <span class="small text-muted">Belum punya akun? </span>

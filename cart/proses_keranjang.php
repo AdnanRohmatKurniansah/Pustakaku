@@ -2,6 +2,7 @@
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
     }
+    require_once dirname(__DIR__) . '/services/cloudinary_service.php';
 
     function cart_user_id() {
         return (int) ($_SESSION['user_id'] ?? 0);
@@ -151,7 +152,7 @@
                     'penulis' => $r['penulis'],
                     'penerbit' => $r['penerbit'],
                     'berat' => (int) $r['berat_gram'],
-                    'gambar' => (!empty($r['gambar']) && file_exists(__DIR__ . '/../assets/uploads/buku/' . $r['gambar'])) ? ('assets/uploads/buku/' . $r['gambar']) : 'assets/images/placeholder.png',
+                    'gambar' => resolveImageUrl($r['gambar'] ?? '', 'buku'),
                     'harga' => $harga,
                     'diskon' => $ada ? $diskon : null,
                     'satuan' => $satuan,

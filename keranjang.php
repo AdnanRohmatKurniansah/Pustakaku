@@ -16,8 +16,6 @@
         exit;
     }
 
-    const BATAS_GRATIS_ONGKIR = 150000;
-
     $keranjang = cart_items($conn);
     $items     = $keranjang['items'];
     $jumlah    = $keranjang['jumlah'];
@@ -31,8 +29,6 @@
     }
     
     $total_hemat = $total_normal - $total_bayar;
-    $sisa_gratis = max(0, BATAS_GRATIS_ONGKIR - $total_bayar);
-    $persen_gratis = BATAS_GRATIS_ONGKIR > 0 ? min(100, round($total_bayar / BATAS_GRATIS_ONGKIR * 100)) : 100;
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -72,28 +68,6 @@
             </section>
         <?php else: ?>
 
-        <?php if (BATAS_GRATIS_ONGKIR > 0): ?>
-        <section class="bg-white border rounded-4 shadow-sm p-3 p-md-4 mb-3 mb-lg-4">
-            <div class="d-flex align-items-center gap-3 mb-2">
-                <div class="ship-icon"><i class="bi bi-truck"></i></div>
-                <div class="flex-grow-1">
-                    <div class="fw-bold text-dark small" id="shipText">
-                        <?php if ($sisa_gratis > 0): ?>
-                            Tambahkan <span class="text-danger"><?= formatRupiah($sisa_gratis); ?></span> lagi untuk mendapat gratis ongkir!
-                        <?php else: ?>
-                            Selamat! Pesanan Anda memenuhi syarat gratis ongkir.
-                        <?php endif; ?>
-                    </div>
-                    <div class="text-muted" style="font-size: 0.75rem;">Dikemas aman dengan kardus tebal dan bubble wrap tanpa biaya tambahan.</div>
-                </div>
-                <span class="small fw-semibold text-muted" id="shipPct"><?= $persen_gratis; ?>%</span>
-            </div>
-            <div class="progress" style="height: 8px;">
-                <div class="progress-bar bg-success" id="shipBar" role="progressbar" style="width: <?= $persen_gratis; ?>%;"></div>
-            </div>
-        </section>
-        <?php endif; ?>
-
         <div class="row g-3 g-lg-4">
             <div class="col-12 col-lg-8">
                 <div class="bg-white border rounded-4 shadow-sm p-3 mb-3 d-flex align-items-center justify-content-between gap-2">
@@ -104,7 +78,7 @@
                     <button type="button" class="btn btn-link text-danger text-decoration-none fw-semibold small p-0" id="btnHapusTerpilih"><i class="bi bi-trash3 me-1"></i>Hapus Terpilih</button>
                 </div>
 
-                <div class="bg-white border rounded-4 shadow-sm overflow-hidden" id="cartList" data-batas="<?= (int) BATAS_GRATIS_ONGKIR; ?>">
+                <div class="bg-white border rounded-4 shadow-sm overflow-hidden" id="cartList">
                     <div class="cart-store-head d-flex align-items-center justify-content-between gap-2 px-3 py-2">
                         <div class="d-flex align-items-center gap-2 fw-bold small text-dark">
                             <i class="bi bi-shop text-success"></i> PustakaKu Official Store

@@ -2,6 +2,7 @@
     session_start();
 
     require_once __DIR__ . '/config/database.php';
+    require_once __DIR__ . '/services/cloudinary_service.php';
 
     function katalog_url(array $params): string {
         $params = array_filter($params, fn($v) => $v !== '' && $v !== null && $v !== []);
@@ -85,7 +86,7 @@
                 'diskon'     => $ada_diskon ? $diskon : null,
                 'persen'     => $ada_diskon ? round((($harga - $diskon) / $harga) * 100) : 0,
                 'stok'       => (int)$row['stok'],
-                'gambar'     => (!empty($row['gambar']) && file_exists(__DIR__ . '/assets/uploads/buku/' . $row['gambar'])) ? ('assets/uploads/buku/' . $row['gambar']) : 'assets/images/placeholder.png'
+                'gambar'     => resolveImageUrl($row['gambar'] ?? '', 'buku')
             ];
         }
     }

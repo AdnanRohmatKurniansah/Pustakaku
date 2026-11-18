@@ -1,5 +1,6 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../services/cloudinary_service.php';
 
     session_start();
 
@@ -66,7 +67,8 @@
                                         <tr>
                                             <td class="fw-semibold text-muted"><?= $no++; ?></td>
                                             <td>
-                                                <img src="<?= (!empty($row['gambar']) && file_exists('../../assets/uploads/buku/' . $row['gambar'])) ? ('../../assets/uploads/buku/' . htmlspecialchars($row['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($row['judul']); ?>" class="rounded-2 object-fit-cover border" style="width: 48px; height: 64px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
+                                                <?php $b_img = resolveImageUrl($row['gambar'] ?? '', 'buku'); if (strpos($b_img, 'assets/') === 0) { $b_img = '../../' . $b_img; } ?>
+                                                <img src="<?= htmlspecialchars($b_img); ?>" alt="<?= htmlspecialchars($row['judul']); ?>" class="rounded-2 object-fit-cover border" style="width: 48px; height: 64px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
                                             </td>
                                             <td>
                                                 <div class="fw-bold text-dark"><?= htmlspecialchars($row['judul']); ?></div>
