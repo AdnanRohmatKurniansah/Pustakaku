@@ -1,238 +1,222 @@
-# 📚 PustakaKu - Sistem Penjualan Buku dan Alat Tulis
+# 📚 PustakaKu - Sistem Penjualan Buku & Alat Tulis Online
 
-**PustakaKu** adalah aplikasi web e-commerce penjualan buku dan alat tulis kantor (ATK) berbasis **PHP Native** dan **MySQL**. Proyek ini dikembangkan sebagai solusi terpadu belanja online buku dan perlengkapan literasi yang dilengkapi dengan manajemen inventaris, sistem checkout dinamis, kalkulasi ongkos kirim otomatis berdasarkan berat, diskon gratis ongkir, pelacakan pesanan, serta modul dashboard analitik dan laporan penjualan bagi administrator.
+**PustakaKu** adalah platform e-commerce terpadu untuk penjualan buku dan alat tulis kantor (ATK) berbasis **PHP** dan **MySQL**. Sistem ini dirancang dengan antarmuka modern yang bersih dan responsif, terintegrasi dengan gateway pembayaran Midtrans Snap, kalkulasi ongkos kirim multi-kurir (JNE, POS, TIKI), penyimpanan media cloud (Cloudinary), notifikasi email otomatis (SMTP PHPMailer), login Google OAuth 2.0, manajemen multi-alamat pengiriman pelanggan, serta panel kendali lengkap bagi administrator.
 
 ---
 
-## 👥 Profil Kelompok
+## 👥 Profil Pengembang
 
 | No | Nama Anggota | NIM |
-|:--:|:-------------|:------------------------------|
+|:--:|:-------------|:----|
 | 1  | **Rizky Prasetyo Landung Nugroho** | **123250078** |
 | 2  | **Adnan Rohmat Kurniansah** | **123250085** |
 
 ---
 
-## 🛠️ Tech Stack & Library
+## 🛠️ Teknologi & Layanan Cloud
 
-* **Back-End:** PHP 8.x (Native Procedural & OOP Database Layer)
-* **Database:** MySQL / MariaDB (Engine InnoDB, Relational Foreign Keys, Cascade/Restrict Integrity)
-* **Front-End:** HTML5, CSS3 Modern, Vanilla JavaScript 
-* **CSS & Icon Framework:** Bootstrap 5.3, Bootstrap Icons 1.11, Font Awesome 6
-* **Web Server & Environment:** Apache / XAMPP on Linux & Windows
-
----
-
-## ✨ Fitur-Fitur Sistem
-
-### 1. 🔐 Modul Autentikasi & Manajemen Pengguna
-* **Autentikasi Multi-Role:** Sistem login terpisah untuk peran **Admin** dan **Pelanggan**.
-* **Keamanan Password:** Enkripsi password menggunakan `password_hash()` (Bcrypt) untuk pelanggan baru dan kompatibilitas hash admin.
-* **Role-Based Access Control:** Proteksi halaman panel admin dari akses tidak sah oleh tamu (*guest*) atau pelanggan.
-* **Profil Pengguna (`akun.php`):** Pelanggan dapat memperbarui nama lengkap, nomor telepon, dan alamat pengiriman default.
-* **Profil Administrator (`admin/profile/`):** Admin dapat mengelola foto profil, kontak, nama, dan detail identitas pengelola toko.
-
-### 2. 🏪 Modul Beranda & Etalase Produk
-* **Hero Promo Carousel:** Slider banner interaktif untuk promosi buku pilihan dan promo gratis ongkir.
-* **Section Buku Rekomendasi:** Sorotan koleksi buku unggulan pilihan editor.
-* **Section Buku Baru Berfilter Dinamis:** Filter rilisan buku terbaru per kategori (*Semua, Fiksi, Non-Fiksi, Bisnis, Komik, dll.*) langsung di halaman beranda.
-* **Kategori Populer Pilihan:** Pintasan kategori buku & ATK yang sinkron dengan katalog dan navigasi.
-* **Fallback Image Placeholder:** Seluruh elemen gambar terintegrasi dengan fallback otomatis ke `assets/images/placeholder.png` jika file fisik sampul tidak ditemukan di server.
-
-### 3. 🔍 Modul Katalog & Pencarian Pintar
-* **Pencarian Multi-Atribut:** Menemukan buku berdasarkan judul, nama penulis, penerbit, maupun nomor ISBN.
-* **Filter Komprehensif:** Filter kategori produk, status ketersediaan stok (*Ready Stock*), dan filter rentang harga minimum-maksimum.
-* **Pengurutan (Sorting):** Urutkan katalog berdasarkan Rekomendasi, Harga Terendah, Harga Tertinggi, Rilisan Terbaru, atau Nama (A-Z).
-* **Pagination Dinamis:** Pembagian halaman katalog yang rapi untuk kenyamanan navigasi belanja.
-
-### 4. 📖 Modul Detail Produk & Ulasan
-* **Informasi Lengkap Produk:** Informasi detail judul, penulis, penerbit, nomor ISBN, kategori, berat gram, jumlah stok tersedia, dan sinopsis/deskripsi.
-* **Kalkulator Diskon Otomatis:** Perhitungan harga coret, persentase diskon, dan nominal penghematan pelanggan.
-* **Pilihan Kuantitas Real-Time:** Input kuantitas yang dibatasi secara cerdas sesuai sisa stok fisik buku.
-* **Ulasan & Rating Bintang:** Tab ulasan pembeli dengan peringkat bintang 1-5 dan testimoni ulasan.
-* **Rekomendasi Produk Serupa:** Daftar buku terkait dari kategori yang sama di bagian bawah halaman.
-
-### 5. 🛒 Modul Keranjang Belanja (Shopping Cart)
-* **Tambah Keranjang Tanpa Reload:** Menambahkan produk ke keranjang secara asinkron dengan respon notifikasi toast di pojok kanan atas.
-* **Manajemen Kuantitas Dinamis:** Tambah atau kurangi jumlah barang langsung dari tabel keranjang dengan kalkulasi otomatis.
-* **Pengecekan Stok Cerdas:** Mencegah penambahan kuantitas melebihi sisa stok yang ada di gudang.
-* **Kalkulasi Akumulasi:** Ringkasan subtotal harga produk, potongan diskon, dan total estimasi berat pesanan (gram).
-* **Progress Banner Gratis Ongkir:** Indikator visual syarat minimal belanja Rp 100.000 untuk mendapatkan subsidi gratis ongkir.
-
-### 6. 💳 Modul Checkout & Transaksi Pengiriman
-* **Form Alamat Penerima Lengkap:** Input nama penerima, nomor telepon aktif, alamat lengkap tujuan, dan catatan pengiriman.
-* **Pilihan Jasa Ekspedisi:** Dukungan kurir JNE, SiCepat, J&T Express, GoSend Instant, dan GrabExpress.
-* **Kalkulasi Ongkir Berbasis Berat:** Perhitungan tarif ongkos kirim otomatis yang dihitung secara proporsional dari total berat barang pesanan (per kg).
-* **Diskon Otomatis Gratis Ongkir:** Pembelian dengan subtotal minimal Rp 100.000 otomatis memperoleh diskon ongkir hingga Rp 20.000 (jika ongkir lebih dari Rp 20.000, sisa tarif ditagihkan secara adil; jika ongkir di bawahnya maka menjadi Rp 0).
-* **Pilihan Metode Pembayaran Beragam:**
-  * Transfer Bank Otomatis / Virtual Account: Bank BCA, Bank Mandiri, Bank BRI
-  * E-Wallet: GoPay, OVO, ShopeePay
-  * Bayar di Tempat (COD / Cash on Delivery)
-* **Otomasi Status Pembayaran:** Pesanan dengan metode transfer/e-wallet langsung terkonfirmasi lunas dan berstatus `diproses`, siap dikemas oleh penjual.
-* **Pengurangan Stok Otomatis:** Stok produk di database otomatis berkurang sesuai kuantitas yang di-checkout, dan keranjang belanja dikosongkan.
-
-### 7. 📄 Modul Pesanan Sukses & Riwayat Transaksi (Pelanggan)
-* **Halaman Konfirmasi Pesanan (`pesanan_sukses.php`):** Menampilkan rincian invoice, nomor resi/pesanan, kurir, alamat tujuan, rincian biaya, dan metode pembayaran.
-* **Cetak Invoice / Nota Resmi:** Tombol cetak nota belanja yang ramah format cetak kertas (print-friendly).
-* **Tab Riwayat Pesanan (`akun.php`):** Pemantauan status transaksi pelanggan yang dikelompokkan ke dalam tab: *Semua, Menunggu Pembayaran, Diproses, Dikirim, Selesai, dan Dibatalkan*.
-
-### 8. 📊 Modul Dashboard & Panel Kendali Toko (Admin)
-* **Dashboard Metrik Utama (`admin/index.php`):**
-  * Statistik total omzet pendapatan toko
-  * Jumlah transaksi pesanan masuk
-  * Total inventaris buku aktif
-  * Jumlah pelanggan terdaftar
-  * Peringatan stok kritis (*Low Stock Alert* untuk stok <= 5)
-  * Tabel transaksi pesanan terkini
-* **Manajemen Kategori Buku (`admin/kategori/`):** CRUD kategori buku & ATK, deskripsi kategori, dan upload gambar ikon kategori.
-* **Manajemen Data Buku (`admin/buku/`):** CRUD katalog buku, upload gambar sampul, pengaturan harga, persentase diskon, nomor ISBN, penerbit, berat produk, dan status tampil.
-* **Manajemen Supplier & Penerbit (`admin/supplier/`):** CRUD data penerbit dan distributor mitra buku lengkap dengan alamat, telepon, dan email.
-* **Manajemen Restok Barang (`admin/restok/`):** Form pencatatan stok masuk dari supplier, otomatis mengupdate penambahan stok fisik buku, serta riwayat log restok masuk.
-* **Manajemen Pesanan Masuk (`admin/pesanan/`):** Pemantauan seluruh pesanan pembeli, filter status pesanan, inspeksi detail pesanan & alamat pengiriman, serta pembaruan status pesanan (*Menunggu Pembayaran -> Diproses -> Dikirim -> Selesai / Dibatalkan*).
-* **Laporan Penjualan (`admin/laporan/`):** Rekapitulasi laporan penjualan lengkap dengan filter periode tanggal, filter status transaksi, ringkasan total omzet, total transaksi, total produk terjual, serta tombol cetak laporan resmi untuk arsip fisik.
+- **Bahasa & Backend:** PHP 8.1+
+- **Database:** MySQL / MariaDB (Kompatibel dengan MySQL Lokal & Cloud MySQL seperti Aiven)
+- **Frontend & Styling:** HTML5, CSS3 Modern, JavaScript (Vanilla ES6), Bootstrap 5.3, Bootstrap Icons
+- **Payment Gateway:** Midtrans Snap API (Virtual Account, E-Wallet, QRIS, Kartu Kredit)
+- **Layanan Pengiriman:** API RajaOngkir (JNE, POS Indonesia, TIKI)
+- **Penyimpanan Media (CDN):** Cloudinary Media Storage
+- **Layanan Email:** PHPMailer dengan SMTP Google Mail
+- **Autentikasi Sosial:** Google Identity Services / OAuth 2.0
 
 ---
 
-## 📁 Struktur Direktori Proyek
+## ✨ Fitur-Fitur Utama Sistem
 
-```text
-projek_web/
-├── admin/                        # Modul Panel Administrator
-│   ├── buku/                     # CRUD data buku & upload sampul
-│   │   ├── edit.php
-│   │   ├── hapus.php
-│   │   ├── index.php
-│   │   ├── proses_edit.php
-│   │   ├── proses_tambah.php
-│   │   └── tambah.php
-│   ├── kategori/                 # CRUD kategori buku & ATK
-│   │   ├── edit.php
-│   │   ├── hapus.php
-│   │   ├── index.php
-│   │   ├── proses_edit.php
-│   │   ├── proses_tambah.php
-│   │   └── tambah.php
-│   ├── laporan/                  # Laporan rekapitulasi penjualan & cetak
-│   │   └── index.php
-│   ├── pesanan/                  # Manajemen & pemrosesan status pesanan
-│   │   ├── detail.php
-│   │   ├── index.php
-│   │   └── proses_status.php
-│   ├── profile/                  # Profil & foto administrator
-│   │   ├── index.php
-│   │   └── proses_edit.php
-│   ├── restok/                   # Pencatatan stok masuk dari supplier
-│   │   ├── detail.php
-│   │   ├── index.php
-│   │   ├── proses_tambah.php
-│   │   └── tambah.php
-│   ├── supplier/                 # CRUD penerbit & distributor buku
-│   │   ├── edit.php
-│   │   ├── hapus.php
-│   │   ├── index.php
-│   │   ├── proses_edit.php
-│   │   ├── proses_tambah.php
-│   │   └── tambah.php
-│   └── index.php                 # Dashboard statistik & metrik utama
-├── assets/                       # Aset statis aplikasi
-│   ├── css/
-│   │   ├── admin.css             # Styling khusus dashboard admin
-│   │   └── style.css             # Styling kustom antarmuka toko
-│   ├── images/
-│   │   ├── banner/               # Banner promosi carousel
-│   │   └── placeholder.png       # Fallback gambar saat berkas tidak ditemukan
-│   ├── js/
-│   │   ├── cart.js               # Handler keranjang belanja AJAX
-│   │   └── toast.js              # Sistem notifikasi toast reusable (kanan atas)
-│   └── uploads/                  # Berkas unggahan pengguna
-│       ├── buku/                 # Gambar sampul buku
-│       ├── kategori/             # Ikon kategori
-│       └── user/                 # Foto profil user/admin
-├── auth/                         # Modul autentikasi pengguna
-│   ├── login.php                 # Halaman formulir login
-│   ├── logout.php                # Pembersihan session keluar akun
-│   ├── process_login.php         # Handler validasi & verifikasi peran login
-│   ├── process_register.php      # Handler pendaftaran pelanggan baru
-│   └── register.php              # Halaman formulir registrasi
-├── cart/                         # Endpoint backend keranjang belanja
-│   ├── aksi_keranjang.php
-│   ├── proses_keranjang.php
-│   └── tambah.php
-├── config/                       # Konfigurasi aplikasi
-│   ├── database.php              # Koneksi database MySQLi
-│   └── helper.php                # Fungsi utilitas (format rupiah, badge status)
-├── layouts/                      # Komponen antarmuka modular
-│   ├── admin/                    # Layout khusus panel admin
-│   │   ├── footer.php
-│   │   ├── navbar.php
-│   │   └── sidebar.php
-│   ├── footer.php                # Footer publik
-│   └── navbar.php                # Navigasi utama dengan keranjang dinamis
-├── schema/                       # Skema database & data dummy
-│   └── pustakaku.sql             # SQL DDL 9 tabel & data dummy lengkap
-├── akun.php                      # Profil pelanggan & riwayat pesanan
-├── checkout.php                  # Halaman checkout pengiriman & pembayaran
-├── detail_buku.php               # Halaman spesifikasi & ulasan buku
-├── index.php                     # Halaman beranda utama toko
-├── katalog.php                   # Halaman katalog pencarian & filter buku
-├── keranjang.php                 # Halaman keranjang belanja
-├── pesanan_sukses.php            # Halaman konfirmasi pesanan & cetak nota
-├── proses_checkout.php           # Handler transaksi checkout pesanan
-└── README.MD                     # Dokumentasi resmi proyek
+### 1. 🔐 Autentikasi & Akun Pengguna
+- **Multi-Role User:** Pemisahan hak akses antara akun **Administrator** dan **Pelanggan**.
+- **Login Google OAuth 2.0:** Masuk cepat dengan sekali klik menggunakan akun Google resmi.
+- **Pendaftaran & Login Standar:** Enkripsi password menggunakan `password_hash()` (Bcrypt).
+- **Lupa & Reset Kata Sandi:** Pengiriman tautan reset password aman ke email pelanggan dengan batas waktu kedaluwarsa 1 jam.
+- **Manajemen Akun Pelanggan (`akun.php`):**
+  - Tab navigasi modern: *Riwayat Pesanan*, *Daftar Alamat*, *Ubah Profil*, dan *Ganti Kata Sandi*.
+  - Pembaruan nama, nomor telepon, dan unggah foto profil langsung ke Cloudinary CDN.
+  - Alamat pengiriman dikelola secara terpusat pada tab Daftar Alamat.
+
+### 2. 🏪 Beranda & Etalase Produk
+- **Hero Banner Carousel:** Banner promo buku dan informasi layanan toko.
+- **Section Rekomendasi:** Kurasi buku-buku pilihan editor.
+- **Filter Kategori Dinamis:** Filter cepat koleksi buku per kategori (*Fiksi, Non-Fiksi, Bisnis, Komik, ATK, dll.*) langsung di beranda tanpa memuat ulang halaman.
+- **Fallback Gambar Cerdas:** Tampilan gambar sampul otomatis mengarah ke Cloudinary CDN dengan fallback ke placeholder lokal jika berkas gambar tidak ditemukan.
+
+### 3. 🔍 Katalog & Pencarian Produk
+- **Pencarian Multi-Atribut:** Menemukan buku berdasarkan judul, nama penulis, atau penerbit.
+- **Filter Lengkap:** Filter kategori buku, ketersediaan stok (*Ready Stock*), dan rentang harga.
+- **Pengurutan (Sorting):** Urutan berdasarkan Rekomendasi, Termurah, Termahal, dan Terbaru.
+- **Navigasi Halaman (Pagination):** Pembagian halaman produk yang teratur dan responsif.
+
+### 4. 📖 Detail Produk & Ulasan
+- **Spesifikasi Lengkap:** Judul, penulis, penerbit, nomor ISBN, kategori, berat gram, sisa stok gudang, dan sinopsis buku.
+- **Kalkulasi Diskon:** Tampilan harga normal, persentase diskon, dan harga hemat.
+- **Kontrol Kuantitas:** Pembatasan kuantitas pemesanan secara otomatis mengikuti sisa stok fisik.
+- **Ulasan & Rating:** Tampilan ulasan pembeli dengan peringkat bintang 1–5.
+- **Rekomendasi Produk Serupa:** Daftar buku terkait dari kategori yang sama.
+
+### 5. 🛒 Keranjang Belanja
+- **Tambah ke Keranjang Instan:** Penambahan produk dengan feedback notifikasi toast di pojok kanan atas.
+- **Pilihan Item Berbasis Checkbox:** Pelanggan bebas mencentang sebagian atau semua barang yang ingin di-checkout.
+- **Pembaruan Kuantitas Real-Time:** Penyesuaian jumlah barang langsung memperbarui subtotal belanja.
+- **Hapus Item:** Hapus satuan maupun hapus massal untuk item terpilih.
+
+### 6. 💳 Checkout & Kalkulasi Pengiriman
+- **Tampilan Modern (Tokopedia/Shopee Style):** Desain card bersih ber-border lembut, section alamat ber-badge, dan *sticky summary* tagihan di sebelah kanan.
+- **Buku Alamat Pengiriman:** Dukungan banyak alamat (Alamat Utama & Alamat Alternatif) dengan modal pemilihan alamat bebas bug overlay.
+- **Pencarian Wilayah Lengkap:** Pemilihan Provinsi dan Kota/Kabupaten otomatis dari master data logistik, dilengkapi input **Kecamatan** dan **Kode Pos** yang tersimpan rapi pada invoice.
+- **Pilihan Kurir & Layanan:** Pilihan kurir JNE, POS Indonesia, dan TIKI dengan penghitungan ongkir otomatis berdasarkan akumulasi berat paket pesanan (gram).
+- **Catatan Pesanan:** Kolom khusus untuk instruksi tambahan ke penjual (misal: packing bubble wrap tebal).
+
+### 7. 💰 Pembayaran Midtrans Snap & Status Otomatis
+- **Integrasi Midtrans Snap Popup:** Pembayaran langsung melalui popup Snap di halaman checkout tanpa dialihkan ke halaman pihak ketiga yang rumit.
+- **Pembaruan Status Otomatis (*Auto-Sync*):** Begitu pembayaran selesai di popup Snap, sistem langsung mengarahkan ke halaman pesanan sukses dengan status **`diproses`** secara otomatis (tanpa tombol manual dan tanpa tertahan di layar *"Back to merchant page"*).
+- **Cek Status Server-Side:** Dilengkapi verifikasi status otomatis melalui Server Key Midtrans jika terdapat transaksi yang tertunda.
+
+### 8. ✉️ Notifikasi Email HTML Profesional
+- **Email Konfirmasi Pesanan:** Dikirimkan otomatis saat pesanan dibuat, berisi nomor pesanan, rincian buku, ongkos kirim, alamat tujuan (lengkap dengan kecamatan), total bayar, dan tombol pelacakan pesanan.
+- **Email Reset Password:** Tautan pengaturan ulang kata sandi dengan token terenkripsi.
+- **Tampilan Brand Bersih:** Header berlatar putih bersih (tanpa blok hijau besar) dengan ikon buku resmi beresolusi tinggi (format *CID Embedded Image*) yang dijamin tampil di Gmail, Outlook, Apple Mail, dan peramban ponsel tanpa diblokir.
+
+### 9. 📊 Panel Administrator (`/admin`)
+- **Dashboard Statistik:** Ringkasan total pendapatan toko, total pesanan masuk, jumlah koleksi buku, jumlah pelanggan terdaftar, dan notifikasi peringatan stok menipis (<= 5).
+- **Manajemen Buku:** Tambah, ubah, dan hapus katalog buku, upload gambar sampul langsung ke cloud, penetapan harga, diskon, dan stok.
+- **Manajemen Kategori:** Kelola kategori buku dan ATK.
+- **Manajemen Supplier & Restok:** Pencatatan mitra penerbit/distributor serta pencatatan stok masuk (*restock log*) yang otomatis menambahkan jumlah stok buku.
+- **Manajemen Pesanan:** Verifikasi pesanan pembeli, pembaruan status pesanan (*Menunggu Pembayaran -> Diproses -> Dikirim -> Selesai / Dibatalkan*), dan penginputan nomor resi pengiriman.
+- **Laporan Penjualan:** Rekapitulasi penjualan berdasarkan rentang tanggal dan status transaksi, dilengkapi fitur cetak laporan resmi untuk arsip fisik.
+
+---
+
+## ⚙️ Konfigurasi Environment Variables (`.env`)
+
+Buat file bernama `.env` di direktori utama proyek dan sesuaikan nilainya:
+
+```env
+# URL Dasar Aplikasi
+APP_URL=http://localhost/projek_web
+
+# Database MySQL (Gunakan localhost untuk lokal atau Host Cloud untuk hosting)
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASS=
+DB_NAME=pustakaku
+
+# Midtrans Payment Gateway
+MIDTRANS_SERVER_KEY=your_midtrans_server_key
+MIDTRANS_CLIENT_KEY=your_midtrans_client_key
+MIDTRANS_IS_PRODUCTION=false
+
+# Layanan Pengiriman (RajaOngkir)
+RAJAONGKIR_API_KEY=your_rajaongkir_api_key
+RAJAONGKIR_ORIGIN_CITY_ID=501
+
+# Penyimpanan Gambar (Cloudinary)
+CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
+CLOUDINARY_API_KEY=your_cloudinary_api_key
+CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+# Pengiriman Email (SMTP Gmail)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_gmail_app_password
+
+# Google OAuth 2.0
+GOOGLE_CLIENT_ID=your_google_client_id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REDIRECT_URI=http://localhost/projek_web/auth/google_callback.php
 ```
+
 ---
 
-## 🚀 Panduan Instalasi & Menjalankan Proyek
+## 🚀 Panduan Instalasi Lokal (XAMPP / Apache)
 
-### 1. Kebutuhan Sistem
-* Web Server: **Apache** (XAMPP / LAMPP / WampServer)
-* Versi PHP: **PHP 8.0** atau versi yang lebih baru
-* Database: **MySQL** atau **MariaDB**
-* Web Browser: Google Chrome, Mozilla Firefox, atau browser modern lainnya
+1. **Pindahkan Folder Proyek:**
+   Tempatkan folder `projek_web` di direktori htdocs web server Anda:
+   - Linux: `/opt/lampp/htdocs/projek_web`
+   - Windows: `C:/xampp/htdocs/projek_web`
 
-### 2. Langkah-Langkah Instalasi
-
-1. **Unduh / Tempatkan Proyek:**
-   Pindahkan folder proyek `projek_web` ke dalam direktori root web server Anda:
-   * Di Windows (XAMPP): `C:/xampp/htdocs/projek_web`
-   * Di Linux (XAMPP/LAMPP): `/opt/lampp/htdocs/projek_web`
-
-2. **Jalankan Layanan Apache & MySQL:**
-   Buka aplikasi XAMPP Control Panel dan nyalakan modul **Apache** dan **MySQL**.
-
-3. **Impor Skema & Data Database:**
-   * Buka browser dan akses **phpMyAdmin** melalui alamat `http://localhost/phpmyadmin/`.
-   * Buat database baru bernama `pustakaku` dengan collation `utf8mb4_general_ci`.
-   * Buka tab **Import**, pilih berkas `schema/pustakaku.sql` yang berada di dalam folder proyek, lalu klik **Import / Go**.
-   * *(Opsi Baris Perintah / Terminal):*
-     ```bash
-     mysql -u root -p pustakaku < schema/pustakaku.sql
-     ```
-
-4. **Konfigurasi Koneksi Database (Jika Diperlukan):**
-   Buka berkas `config/database.php` dan sesuaikan kredensial server lokal Anda jika berbeda dari konfigurasi standar:
-   ```php
-   $hostname = "localhost";
-   $username = "root";
-   $password = "";
-   $database = "pustakaku";
+2. **Instal Dependensi Composer:**
+   Jalankan perintah berikut di terminal direktori proyek:
+   ```bash
+   composer install
    ```
 
-5. **Akses Aplikasi Melalui Browser:**
-   Buka peramban web dan navigasikan ke alamat:
+3. **Impor Database:**
+   - Akses **phpMyAdmin** di browser (`http://localhost/phpmyadmin`).
+   - Buat database baru dengan nama `pustakaku`.
+   - Buka tab **Import**, pilih file `schema/pustakaku.sql`, lalu klik **Import / Go**.
+
+4. **Konfigurasi File `.env`:**
+   Sesuaikan kredensial database lokal Anda pada file `.env`.
+
+5. **Jalankan Aplikasi:**
+   Buka browser dan akses:
    ```text
    http://localhost/projek_web/
    ```
 
 ---
 
+## ☁️ Panduan Deployment ke Vercel
+
+Proyek ini telah dikonfigurasi khusus dengan router serverless tunggal ([api/index.php](file:///opt/lampp/htdocs/projek_web/api/index.php)) dan [vercel.json](file:///opt/lampp/htdocs/projek_web/vercel.json) agar **dapat langsung di-deploy di Vercel Hobby Plan (100% Gratis)** tanpa terkena batasan kuota Serverless Functions.
+
+### Langkah-Langkah Deployment:
+
+1. **Siapkan Database MySQL Cloud:**
+   Karena Vercel tidak memiliki server MySQL lokal, gunakan database cloud gratis seperti **Aiven**, **TiDB Cloud**, atau **Railway**. Impor skema tabel dari file `schema/pustakaku.sql` ke database cloud tersebut.
+
+2. **Push Repositori ke GitHub:**
+   Pastikan seluruh file proyek telah di-push ke repositori GitHub Anda:
+   ```bash
+   git add .
+   git commit -m "feat: ready for vercel deployment"
+   git push origin main
+   ```
+
+3. **Import Proyek di Vercel:**
+   - Masuk ke dashboard [vercel.com](https://vercel.com).
+   - Klik **"Add New..."** lalu pilih **"Project"**.
+   - Pilih repositori GitHub PustakaKu Anda dan klik **"Import"**.
+
+4. **Konfigurasi Project Settings di Vercel:**
+   - **Framework Preset:** Pilih **`Other`**.
+   - **Root Directory:** `./` (default).
+   - **Build and Output Settings:** Biarkan default (otomatis ditangani oleh `vercel.json`).
+
+5. **Isi Environment Variables di Dashboard Vercel:**
+   Pada bagian **Environment Variables**, tambahkan variabel berikut:
+   - `DB_HOST`: Host MySQL cloud Anda (misal: `mysql-xxx.aivencloud.com`).
+   - `DB_PORT`: Port MySQL cloud (misal: `13360` atau `3306`).
+   - `DB_USER`: Username database cloud.
+   - `DB_PASS`: Password database cloud.
+   - `DB_NAME`: `pustakaku`.
+   - `APP_URL`: URL domain Vercel Anda (misal: `https://pustakaku-web.vercel.app`).
+   - `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_IS_PRODUCTION`.
+   - `RAJAONGKIR_API_KEY`, `RAJAONGKIR_ORIGIN_CITY_ID`.
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.
+   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+   - `GOOGLE_REDIRECT_URI`: `https://pustakaku-web.vercel.app/auth/google_callback.php`.
+
+6. **Klik "Deploy":**
+   Tunggu 1–2 menit hingga proses build selesai. Situs Anda akan langsung online dengan domain `*.vercel.app`.
+
+7. **Perbarui URL Callback Pihak Ketiga:**
+   - Tambahkan URL callback Vercel (`https://your-domain.vercel.app/auth/google_callback.php`) pada **Google Cloud Console**.
+   - Atur URL domain Vercel pada menu konfigurasi **Midtrans Dashboard**.
+
+---
+
 ## 🔑 Kredensial Akun Uji Coba
 
-Untuk memudahkan pengujian fungsionalitas sistem, telah disediakan akun bawaan di dalam database:
-
-| Peran (Role) | Email / Username | Password | Keterangan Akses |
+| Peran (Role) | Email | Password | Hak Akses |
 |:---|:---|:---|:---|
-| **Administrator** | `admin@pustakaku.com` | `admin123` | Akses penuh dashboard `/admin`, inventaris buku, kategori, restok, pesanan masuk, dan laporan penjualan. |
-| **Pelanggan 1** | `budi@gmail.com` | `password123` | Akun pelanggan aktif dengan data alamat lengkap di Yogyakarta dan riwayat pesanan. |
-| **Pelanggan 2** | `atnandimas@gmail.com` | `password123` | Akun pelanggan aktif dengan data alamat di Jakarta Pusat. |
-
+| **Administrator** | `admin@pustakaku.com` | `admin123` | Akses penuh dashboard `/admin`, inventaris buku, restok, pesanan masuk, dan laporan penjualan. |
+| **Pelanggan 1** | `budi@gmail.com` | `password123` | Akun pelanggan aktif dengan data alamat lengkap dan riwayat pesanan. |
+| **Pelanggan 2** | `atnandimas@gmail.com` | `password123` | Akun pelanggan aktif untuk pengujian checkout & transaksi. |
