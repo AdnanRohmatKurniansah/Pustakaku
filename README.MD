@@ -162,57 +162,6 @@ GOOGLE_REDIRECT_URI=http://localhost/projek_web/auth/google_callback.php
 
 ---
 
-## ☁️ Panduan Deployment ke Vercel
-
-Proyek ini telah dikonfigurasi khusus dengan router serverless tunggal ([api/index.php](file:///opt/lampp/htdocs/projek_web/api/index.php)) dan [vercel.json](file:///opt/lampp/htdocs/projek_web/vercel.json) agar **dapat langsung di-deploy di Vercel Hobby Plan (100% Gratis)** tanpa terkena batasan kuota Serverless Functions.
-
-### Langkah-Langkah Deployment:
-
-1. **Siapkan Database MySQL Cloud:**
-   Karena Vercel tidak memiliki server MySQL lokal, gunakan database cloud gratis seperti **Aiven**, **TiDB Cloud**, atau **Railway**. Impor skema tabel dari file `schema/pustakaku.sql` ke database cloud tersebut.
-
-2. **Push Repositori ke GitHub:**
-   Pastikan seluruh file proyek telah di-push ke repositori GitHub Anda:
-   ```bash
-   git add .
-   git commit -m "feat: ready for vercel deployment"
-   git push origin main
-   ```
-
-3. **Import Proyek di Vercel:**
-   - Masuk ke dashboard [vercel.com](https://vercel.com).
-   - Klik **"Add New..."** lalu pilih **"Project"**.
-   - Pilih repositori GitHub PustakaKu Anda dan klik **"Import"**.
-
-4. **Konfigurasi Project Settings di Vercel:**
-   - **Framework Preset:** Pilih **`Other`**.
-   - **Root Directory:** `./` (default).
-   - **Build and Output Settings:** Biarkan default (otomatis ditangani oleh `vercel.json`).
-
-5. **Isi Environment Variables di Dashboard Vercel:**
-   Pada bagian **Environment Variables**, tambahkan variabel berikut:
-   - `DB_HOST`: Host MySQL cloud Anda (misal: `mysql-xxx.aivencloud.com`).
-   - `DB_PORT`: Port MySQL cloud (misal: `13360` atau `3306`).
-   - `DB_USER`: Username database cloud.
-   - `DB_PASS`: Password database cloud.
-   - `DB_NAME`: `pustakaku`.
-   - `APP_URL`: URL domain Vercel Anda (misal: `https://pustakaku-web.vercel.app`).
-   - `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, `MIDTRANS_IS_PRODUCTION`.
-   - `RAJAONGKIR_API_KEY`, `RAJAONGKIR_ORIGIN_CITY_ID`.
-   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`.
-   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`.
-   - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
-   - `GOOGLE_REDIRECT_URI`: `https://pustakaku-web.vercel.app/auth/google_callback.php`.
-
-6. **Klik "Deploy":**
-   Tunggu 1–2 menit hingga proses build selesai. Situs Anda akan langsung online dengan domain `*.vercel.app`.
-
-7. **Perbarui URL Callback Pihak Ketiga:**
-   - Tambahkan URL callback Vercel (`https://your-domain.vercel.app/auth/google_callback.php`) pada **Google Cloud Console**.
-   - Atur URL domain Vercel pada menu konfigurasi **Midtrans Dashboard**.
-
----
-
 ## 🔑 Kredensial Akun Uji Coba
 
 | Peran (Role) | Email | Password | Hak Akses |
