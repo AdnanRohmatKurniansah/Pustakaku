@@ -3,14 +3,19 @@
 
     session_start();
 
-    $client_id = $_ENV['GOOGLE_CLIENT_ID'] ?? '';
-    $client_secret = $_ENV['GOOGLE_CLIENT_SECRET'] ?? '';
+    $client_id = $_ENV['GOOGLE_CLIENT_ID'] ?? $_SERVER['GOOGLE_CLIENT_ID'] ?? getenv('GOOGLE_CLIENT_ID') ?: '';
+    $client_secret = $_ENV['GOOGLE_CLIENT_SECRET'] ?? $_SERVER['GOOGLE_CLIENT_SECRET'] ?? getenv('GOOGLE_CLIENT_SECRET') ?: '';
 
     $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
     $http_host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-    $detected_uri = $scheme . '://' . $http_host . '/projek_web/auth/google_callback.php';
+    $path_prefix = (strpos($_SERVER['REQUEST_URI'] ?? '', '/projek_web') === 0) ? '/projek_web' : '';
+    $detected_uri = $scheme . '://' . $http_host . $path_prefix . '/auth/google_callback.php';
 
-    $redirect_uri = !empty($_ENV['GOOGLE_REDIRECT_URI']) ? $_ENV['GOOGLE_REDIRECT_URI'] : $detected_uri;
+    if (strpos($http_host, 'vercel.app') !== false) {
+        $redirect_uri = $scheme . '://' . $http_host . '/auth/google_callback.php';
+    } else {
+        $redirect_uri = !empty($_ENV['GOOGLE_REDIRECT_URI']) ? $_ENV['GOOGLE_REDIRECT_URI'] : $detected_uri;
+    }
 
     if (strpos($http_host, '127.0.0.1') !== false && strpos($redirect_uri, 'localhost') !== false) {
         $redirect_uri = str_replace('localhost', '127.0.0.1', $redirect_uri);
