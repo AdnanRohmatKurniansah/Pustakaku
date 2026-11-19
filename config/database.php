@@ -1,4 +1,8 @@
 <?php
+    if (ob_get_level() === 0) {
+        ob_start();
+    }
+
     $autoload_path = dirname(__DIR__) . '/vendor/autoload.php';
     if (file_exists($autoload_path)) {
         require_once $autoload_path;
@@ -8,6 +12,28 @@
     if (file_exists($env_file) && class_exists('Dotenv\Dotenv')) {
         $dotenv = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
         $dotenv->safeLoad();
+    }
+
+    foreach ($_SERVER as $k => $v) {
+        if (!isset($_ENV[$k]) && is_string($v)) {
+            $_ENV[$k] = $v;
+        }
+    }
+    $all_keys = [
+        'DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASS', 'DB_NAME',
+        'APP_URL', 'MIDTRANS_SERVER_KEY', 'MIDTRANS_CLIENT_KEY', 'MIDTRANS_IS_PRODUCTION',
+        'RAJAONGKIR_API_KEY', 'RAJAONGKIR_ORIGIN_CITY_ID',
+        'CLOUDINARY_CLOUD_NAME', 'CLOUDINARY_API_KEY', 'CLOUDINARY_API_SECRET',
+        'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS',
+        'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI'
+    ];
+    foreach ($all_keys as $key) {
+        if (!isset($_ENV[$key]) || $_ENV[$key] === '') {
+            $val = getenv($key);
+            if ($val !== false && $val !== '') {
+                $_ENV[$key] = $val;
+            }
+        }
     }
 
     $hostname = $_ENV['DB_HOST'] ?? 'localhost';
