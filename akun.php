@@ -58,7 +58,6 @@
         $alamat_utama = $alamat_list[0];
     }
 
-    /* ---------- Ringkasan statistik untuk sidebar ---------- */
     $total_belanja = 0;
     $total_item_dibeli = 0;
     $total_ulasan = 0;
@@ -238,12 +237,7 @@
                 </aside>
             </div>
 
-            <!-- ==================== KONTEN: TAB HORIZONTAL ==================== -->
             <div class="col-12 col-lg-8 col-xl-9">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <i class="bi bi-person-circle text-muted fs-5"></i>
-                    <h5 class="fw-bold text-dark mb-0"><?= htmlspecialchars($user['nama_lengkap']); ?></h5>
-                </div>
 
                 <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
                     <ul class="nav account-tabs" id="accountTabs" role="tablist">
@@ -384,7 +378,6 @@
                         </div>
                     </div>
 
-                    <!-- ==================== BIODATA ==================== -->
                     <div class="tab-pane fade <?= ($active_tab === 'biodata') ? 'show active' : ''; ?>" id="tab-biodata" role="tabpanel" aria-labelledby="tab-biodata-btn" tabindex="0">
                         <div class="account-pane-block">
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom mb-4">
@@ -479,7 +472,6 @@
                         </div>
                     </div>
 
-                    <!-- ==================== RIWAYAT PEMBAYARAN ==================== -->
                     <div class="tab-pane fade <?= ($active_tab === 'pembayaran') ? 'show active' : ''; ?>" id="tab-pembayaran" role="tabpanel" aria-labelledby="tab-pembayaran-btn" tabindex="0">
                         <div class="account-pane-block">
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom mb-4">
@@ -532,7 +524,6 @@
                         </div>
                     </div>
 
-                    <!-- ==================== MANAJEMEN AKUN ==================== -->
                     <div class="tab-pane fade <?= ($active_tab === 'manajemen') ? 'show active' : ''; ?>" id="tab-manajemen" role="tabpanel" aria-labelledby="tab-manajemen-btn" tabindex="0">
                         <div class="account-pane-block">
                             <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-4">
@@ -610,7 +601,6 @@
     </div>
     </main>
 
-    <!-- ==================== MODAL UBAH PROFIL ==================== -->
     <div class="modal fade" id="modalUbahProfil" tabindex="-1" aria-labelledby="modalUbahProfilLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content rounded-4 border-0 shadow">
