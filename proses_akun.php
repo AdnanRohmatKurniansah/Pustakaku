@@ -18,7 +18,7 @@
 
         if (empty($nama_lengkap)) {
             $_SESSION['error'] = "Nama lengkap tidak boleh kosong!";
-            header("Location: akun.php?tab=profil");
+            header("Location: akun.php?tab=biodata");
             exit();
         }
 
@@ -29,7 +29,7 @@
                 $foto_baru = $cld['url'];
             } else {
                 $_SESSION['error'] = $cld['message'] ?? "Gagal mengunggah foto profil.";
-                header("Location: akun.php?tab=profil");
+                header("Location: akun.php?tab=biodata");
                 exit();
             }
         }
@@ -46,7 +46,7 @@
 
         $_SESSION['nama_lengkap'] = $nama_lengkap;
         $_SESSION['success'] = "Data profil berhasil diperbarui!";
-        header("Location: akun.php?tab=profil");
+        header("Location: akun.php?tab=biodata");
         exit();
     }
 
@@ -57,19 +57,19 @@
 
         if (empty($password_lama) || empty($password_baru) || empty($konfirmasi)) {
             $_SESSION['error'] = "Semua kolom kata sandi wajib diisi!";
-            header("Location: akun.php?tab=keamanan");
+            header("Location: akun.php?tab=manajemen");
             exit();
         }
 
         if (strlen($password_baru) < 6) {
             $_SESSION['error'] = "Kata sandi baru minimal 6 karakter!";
-            header("Location: akun.php?tab=keamanan");
+            header("Location: akun.php?tab=manajemen");
             exit();
         }
 
         if ($password_baru !== $konfirmasi) {
             $_SESSION['error'] = "Konfirmasi kata sandi baru tidak cocok!";
-            header("Location: akun.php?tab=keamanan");
+            header("Location: akun.php?tab=manajemen");
             exit();
         }
 
@@ -81,11 +81,11 @@
             $hashed_esc = mysqli_real_escape_string($conn, $hashed_new);
             mysqli_query($conn, "UPDATE users SET password = '$hashed_esc', updated_at = NOW() WHERE id = '$user_id'");
             $_SESSION['success'] = "Kata sandi berhasil diubah!";
-            header("Location: akun.php?tab=keamanan");
+            header("Location: akun.php?tab=manajemen");
             exit();
         } else {
             $_SESSION['error'] = "Kata sandi saat ini tidak sesuai!";
-            header("Location: akun.php?tab=keamanan");
+            header("Location: akun.php?tab=manajemen");
             exit();
         }
     }

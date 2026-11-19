@@ -1052,3 +1052,209 @@ body {
     height: 60px;
     font-size: 20px;
 }
+
+/* ==================================================================
+   HALAMAN AKUN SAYA (akun.php)
+   Layout ala Tokopedia: sidebar profil di kiri, navigasi tab
+   horizontal di atas panel konten.
+   ================================================================== */
+
+/* Kolom sidebar akun (sticky di desktop) */
+.account-side {
+    position: sticky;
+    top: 90px;
+}
+
+/* Avatar kecil pada kartu profil sidebar */
+.account-side-avatar-sm {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #d1e7dd;
+    background: #198754;
+    color: #fff;
+    font-size: 1.3rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Kotak ringkasan statistik (pesanan, alamat, keranjang, ulasan) */
+.account-stat {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.85rem;
+    padding: 0.5rem 0.35rem;
+    text-align: center;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: block;
+}
+
+.account-stat:hover {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+    transform: translateY(-2px);
+}
+
+.account-stat .stat-value {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #198754;
+    line-height: 1.1;
+    display: block;
+}
+
+.account-stat .stat-label {
+    font-size: 0.62rem;
+    color: #64748b;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* Baris informasi ringkas pada sidebar */
+.account-info-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 0.78rem;
+    color: #64748b;
+    padding: 0.4rem 0;
+}
+
+.account-info-row + .account-info-row {
+    border-top: 1px dashed #e2e8f0;
+}
+
+.account-info-row > span:first-child {
+    white-space: nowrap;
+}
+
+.account-info-row > span:last-child {
+    color: #1e293b;
+    font-weight: 600;
+    text-align: right;
+    word-break: break-word;
+}
+
+/* ------------------------------------------------------------------
+   Tab horizontal (Biodata Diri | Daftar Alamat | Pembayaran | ...)
+   ------------------------------------------------------------------ */
+.account-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 2.25rem;
+    padding: 0 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+}
+
+.account-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.account-tabs .nav-item {
+    flex: 0 0 auto;
+}
+
+.account-tab-link {
+    position: relative;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #64748b;
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+    padding: 1rem 0;
+    transition: color 0.2s ease;
+}
+
+.account-tab-link:hover {
+    color: #198754;
+    background: transparent;
+}
+
+.account-tab-link.active {
+    color: #198754 !important;
+    background: transparent !important;
+    font-weight: 700;
+}
+
+.account-tab-link.active::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 3px;
+    background: #198754;
+    border-radius: 3px 3px 0 0;
+}
+
+/* Blok konten di dalam tiap tab pane */
+.account-pane-block + .account-pane-block {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+/* Kartu biodata pada tab Biodata */
+.biodata-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.85rem;
+    padding: 0.7rem 0.9rem;
+}
+
+.biodata-item .biodata-label {
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    margin-bottom: 2px;
+}
+
+.biodata-item .biodata-value {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e293b;
+    word-break: break-word;
+}
+
+/* Baris riwayat pembayaran */
+.payment-row {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.9rem;
+    padding: 0.75rem 0.9rem;
+    transition: all 0.2s ease;
+    background: #fff;
+}
+
+.payment-row:hover {
+    border-color: #a7f3d0;
+    background: #f8fefb;
+}
+
+.payment-row .payment-amount {
+    font-size: 0.95rem;
+    font-weight: 800;
+    color: #198754;
+}
+
+@media (max-width: 991.98px) {
+    .account-side {
+        position: static;
+    }
+    .account-tabs {
+        gap: 1.25rem;
+        padding: 0 1rem;
+    }
+}

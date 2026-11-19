@@ -7,7 +7,7 @@
 
     if (!isset($_SESSION['user_id'])) {
         $_SESSION['error'] = "Silakan masuk terlebih dahulu untuk mengakses akun Anda.";
-        $_SESSION['redirect_after_login'] = 'akun.php';
+        $_SESSION['redirect_after_login'] = '../akun.php';
         header("Location: auth/login.php");
         exit;
     }
@@ -47,9 +47,53 @@
         }
     }
 
+    $alamat_utama = null;
+    foreach ($alamat_list as $al) {
+        if ((int) $al['is_primary'] === 1) {
+            $alamat_utama = $al;
+            break;
+        }
+    }
+    if (!$alamat_utama && !empty($alamat_list)) {
+        $alamat_utama = $alamat_list[0];
+    }
+
+    /* ---------- Ringkasan statistik untuk sidebar ---------- */
+    $total_belanja = 0;
+    $total_item_dibeli = 0;
+    $total_ulasan = 0;
+
+    $q_sum_belanja = mysqli_query($conn, "SELECT COALESCE(SUM(total_bayar), 0) AS total FROM pesanan WHERE user_id = '$user_id' AND status_pesanan NOT IN ('menunggu_pembayaran', 'dibatalkan')");
+    if ($q_sum_belanja && $r_sum = mysqli_fetch_assoc($q_sum_belanja)) {
+        $total_belanja = (float) $r_sum['total'];
+    }
+
+    $q_sum_item = mysqli_query($conn, "SELECT COALESCE(SUM(dp.jumlah), 0) AS qty FROM detail_pesanan dp JOIN pesanan p ON dp.pesanan_id = p.id WHERE p.user_id = '$user_id' AND p.status_pesanan NOT IN ('menunggu_pembayaran', 'dibatalkan')");
+    if ($q_sum_item && $r_item = mysqli_fetch_assoc($q_sum_item)) {
+        $total_item_dibeli = (int) $r_item['qty'];
+    }
+
+    $q_sum_ulasan = mysqli_query($conn, "SELECT COUNT(*) AS jml FROM ulasan WHERE user_id = '$user_id'");
+    if ($q_sum_ulasan && $r_ul = mysqli_fetch_assoc($q_sum_ulasan)) {
+        $total_ulasan = (int) $r_ul['jml'];
+    }
+
+    $total_pesanan_selesai   = 0;
+    $total_pesanan_proses    = 0;
+    $total_pesanan_menunggu  = 0;
+    foreach ($orders as $ord) {
+        if ($ord['status_pesanan'] === 'selesai') {
+            $total_pesanan_selesai++;
+        } elseif (in_array($ord['status_pesanan'], ['diproses', 'dikirim'], true)) {
+            $total_pesanan_proses++;
+        } elseif (in_array($ord['status_pesanan'], ['menunggu_pembayaran', 'menunggu_verifikasi'], true)) {
+            $total_pesanan_menunggu++;
+        }
+    }
+
     $provinces = rajaongkir_get_provinces();
     $active_tab = $_GET['tab'] ?? 'pesanan';
-    $valid_tabs = ['pesanan', 'alamat', 'profil', 'keamanan'];
+    $valid_tabs = ['biodata', 'alamat', 'pembayaran', 'pesanan', 'manajemen'];
     if (!in_array($active_tab, $valid_tabs, true)) {
         $active_tab = 'pesanan';
     }
@@ -62,36 +106,8 @@
     <title>Akun Saya - PustakaKu</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="assets/css/style.css">
-    <link rel="stylesheet" href="assets/css/checkout_custom.css">
-    <style>
-        .account-nav-pill {
-            color: #334155;
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s ease-in-out;
-            text-align: left;
-        }
-        .account-nav-pill:hover:not(.active) {
-            background-color: #ecfdf5;
-            color: #198754;
-            border-color: #a7f3d0;
-        }
-        .account-nav-pill.active {
-            background-color: #198754 !important;
-            color: #ffffff !important;
-            border-color: #198754 !important;
-            box-shadow: 0 4px 12px rgba(25, 135, 84, 0.22);
-        }
-        .account-nav-pill.active i,
-        .account-nav-pill.active span.nav-text {
-            color: #ffffff !important;
-        }
-        .account-nav-pill.active .badge {
-            background-color: #ffffff !important;
-            color: #198754 !important;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/style.css?v=<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time(); ?>">
+    <link rel="stylesheet" href="assets/css/checkout_custom.css?v=<?= @filemtime(__DIR__ . '/assets/css/checkout_custom.css') ?: time(); ?>">
 </head>
 <body class="bg-light">
     <?php include(__DIR__ . '/layouts/navbar.php'); ?>
@@ -121,98 +137,136 @@
         <?php endif; ?>
 
         <div class="row g-4">
-            <div class="col-12 col-lg-4">
-                <div class="card border-0 shadow-sm rounded-4 p-4 text-center mb-4 bg-white">
-                    <div class="position-relative d-inline-block mx-auto mb-3">
-                        <?php if ($has_photo): ?>
-                            <img src="<?= htmlspecialchars($foto_profil_url); ?>" alt="<?= htmlspecialchars($user['nama_lengkap']); ?>" class="rounded-circle object-fit-cover shadow-sm border border-3 border-success-subtle" style="width: 100px; height: 100px;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
-                        <?php else: ?>
-                            <div class="rounded-circle bg-success text-white fw-bold d-flex align-items-center justify-content-center shadow-sm border border-3 border-success-subtle" style="width: 100px; height: 100px; font-size: 2.2rem;"><?= $initials; ?></div>
+            <!-- ==================== SIDEBAR: PROFIL SAJA ==================== -->
+            <div class="col-12 col-lg-4 col-xl-3">
+                <aside class="account-side">
+                    <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+                        <!-- Identitas -->
+                        <div class="p-3 d-flex align-items-center gap-3 border-bottom">
+                            <?php if ($has_photo): ?>
+                                <img src="<?= htmlspecialchars($foto_profil_url); ?>" alt="<?= htmlspecialchars($user['nama_lengkap']); ?>" class="account-side-avatar-sm flex-shrink-0" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
+                            <?php else: ?>
+                                <div class="account-side-avatar-sm flex-shrink-0"><?= $initials; ?></div>
+                            <?php endif; ?>
+                            <div class="min-w-0">
+                                <div class="fw-bold text-dark text-truncate"><?= htmlspecialchars($user['nama_lengkap']); ?></div>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 mt-1" style="font-size: 10px;">
+                                    <i class="bi bi-patch-check-fill me-1"></i><?= !empty($user['no_telepon']) ? htmlspecialchars($user['no_telepon']) : 'Lengkapi Nomor HP'; ?>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Ringkasan angka -->
+                        <div class="p-3 border-bottom">
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <a href="akun.php?tab=pesanan" class="account-stat">
+                                        <span class="stat-value"><?= $total_my_orders; ?></span>
+                                        <span class="stat-label">Pesanan</span>
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a href="akun.php?tab=pembayaran" class="account-stat">
+                                        <span class="stat-value"><?= formatRupiah($total_belanja); ?></span>
+                                        <span class="stat-label">Total Belanja</span>
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a href="akun.php?tab=alamat" class="account-stat">
+                                        <span class="stat-value"><?= count($alamat_list); ?></span>
+                                        <span class="stat-label">Alamat</span>
+                                    </a>
+                                </div>
+                                <div class="col-6">
+                                    <a href="keranjang.php" class="account-stat">
+                                        <span class="stat-value"><?= $cart_qty; ?></span>
+                                        <span class="stat-label">Keranjang</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Data ringkas pengguna -->
+                        <div class="p-3 border-bottom">
+                            <div class="account-info-row pt-0">
+                                <span><i class="bi bi-geo-alt me-2 text-success"></i>Alamat Utama</span>
+                                <span class="text-truncate" style="max-width: 120px;">
+                                    <?= $alamat_utama ? htmlspecialchars($alamat_utama['kota_nama']) . ', ' . htmlspecialchars($alamat_utama['provinsi_nama']) : '-'; ?>
+                                </span>
+                            </div>
+                            <div class="account-info-row">
+                                <span><i class="bi bi-book me-2 text-success"></i>Buku Dibeli</span>
+                                <span><?= $total_item_dibeli; ?> eksemplar</span>
+                            </div>
+                            <div class="account-info-row">
+                                <span><i class="bi bi-chat-square-text me-2 text-success"></i>Ulasan</span>
+                                <span><?= $total_ulasan; ?></span>
+                            </div>
+                            <div class="account-info-row">
+                                <span><i class="bi bi-calendar3 me-2 text-success"></i>Bergabung</span>
+                                <span><?= $joined_date; ?></span>
+                            </div>
+                        </div>
+
+                        <!-- Status pesanan -->
+                        <?php if ($total_my_orders > 0): ?>
+                            <div class="p-3 d-flex flex-wrap gap-2 border-bottom">
+                                <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i><?= $total_pesanan_selesai; ?> Selesai</span>
+                                <span class="badge bg-primary-subtle text-primary rounded-pill px-2 py-1"><i class="bi bi-box-seam me-1"></i><?= $total_pesanan_proses; ?> Diproses</span>
+                                <span class="badge bg-warning-subtle text-warning rounded-pill px-2 py-1"><i class="bi bi-clock-history me-1"></i><?= $total_pesanan_menunggu; ?> Menunggu</span>
+                            </div>
                         <?php endif; ?>
-                    </div>
 
-                    <h5 class="fw-bold text-dark mb-1"><?= htmlspecialchars($user['nama_lengkap']); ?></h5>
-                    <p class="text-muted small mb-2"><?= htmlspecialchars($user['email']); ?></p>
-
-                    <hr class="my-3 text-muted">
-
-                    <div class="text-start small text-muted mb-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <span><i class="bi bi-calendar3 me-2 text-success"></i>Bergabung:</span>
-                            <span class="fw-semibold text-dark"><?= $joined_date; ?></span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span><i class="bi bi-telephone me-2 text-success"></i>Telepon:</span>
-                            <span class="fw-semibold text-dark"><?= !empty($user['no_telepon']) ? htmlspecialchars($user['no_telepon']) : '-'; ?></span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span><i class="bi bi-geo-alt me-2 text-success"></i>Alamat Tersimpan:</span>
-                            <span class="badge bg-success rounded-pill px-2 py-1"><?= count($alamat_list); ?> Alamat</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-2">
-                            <span><i class="bi bi-bag-check me-2 text-success"></i>Keranjang:</span>
-                            <span class="badge bg-success rounded-pill px-2 py-1"><?= $cart_qty; ?> item</span>
-                        </div>
-                        <div class="d-flex justify-content-between">
-                            <span><i class="bi bi-receipt me-2 text-success"></i>Pesanan:</span>
-                            <span class="badge bg-success rounded-pill px-2 py-1"><?= $total_my_orders; ?> transaksi</span>
+                        <!-- Aksi cepat -->
+                        <div class="p-3 d-grid gap-2">
+                            <a href="keranjang.php" class="btn btn-outline-success rounded-pill btn-sm py-2 fw-semibold d-flex align-items-center justify-content-between px-3">
+                                <span><i class="bi bi-bag-fill me-2"></i>Keranjang Belanja</span>
+                                <span class="badge bg-success rounded-pill"><?= $cart_qty; ?></span>
+                            </a>
+                            <?php if ($user['role'] === 'admin'): ?>
+                                <a href="admin/index.php" class="btn btn-success rounded-pill btn-sm py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-speedometer2"></i>
+                                    <span>Panel Administrator</span>
+                                </a>
+                            <?php endif; ?>
+                            <a href="auth/logout.php" class="btn btn-outline-danger rounded-pill btn-sm py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-box-arrow-right"></i>
+                                <span>Keluar</span>
+                            </a>
                         </div>
                     </div>
+                </aside>
+            </div>
 
-                    <hr class="my-3 text-muted">
+            <!-- ==================== KONTEN: TAB HORIZONTAL ==================== -->
+            <div class="col-12 col-lg-8 col-xl-9">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-person-circle text-muted fs-5"></i>
+                    <h5 class="fw-bold text-dark mb-0"><?= htmlspecialchars($user['nama_lengkap']); ?></h5>
+                </div>
 
-                    <ul class="nav nav-pills flex-column gap-2" id="accountTabs" role="tablist">
+                <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
+                    <ul class="nav account-tabs" id="accountTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link account-nav-pill w-100 rounded-pill py-2.5 px-3 fw-semibold d-flex align-items-center justify-content-between <?= ($active_tab === 'pesanan') ? 'active' : ''; ?>" id="tab-pesanan-btn" data-bs-toggle="pill" data-bs-target="#tab-pesanan" type="button" role="tab" aria-controls="tab-pesanan" aria-selected="<?= ($active_tab === 'pesanan') ? 'true' : 'false'; ?>">
-                                <span><i class="bi bi-clock-history me-2"></i><span class="nav-text">Riwayat Pesanan</span></span>
-                                <span class="badge bg-success-subtle text-success rounded-pill"><?= $total_my_orders; ?></span>
-                            </button>
+                            <button class="nav-link account-tab-link <?= ($active_tab === 'biodata') ? 'active' : ''; ?>" id="tab-biodata-btn" data-bs-toggle="pill" data-bs-target="#tab-biodata" type="button" role="tab" aria-controls="tab-biodata" aria-selected="<?= ($active_tab === 'biodata') ? 'true' : 'false'; ?>">Biodata Diri</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link account-nav-pill w-100 rounded-pill py-2.5 px-3 fw-semibold d-flex align-items-center justify-content-between <?= ($active_tab === 'alamat') ? 'active' : ''; ?>" id="tab-alamat-btn" data-bs-toggle="pill" data-bs-target="#tab-alamat" type="button" role="tab" aria-controls="tab-alamat" aria-selected="<?= ($active_tab === 'alamat') ? 'true' : 'false'; ?>">
-                                <span><i class="bi bi-geo-alt-fill me-2"></i><span class="nav-text">Daftar Alamat</span></span>
-                                <span class="badge bg-success-subtle text-success rounded-pill"><?= count($alamat_list); ?></span>
-                            </button>
+                            <button class="nav-link account-tab-link <?= ($active_tab === 'alamat') ? 'active' : ''; ?>" id="tab-alamat-btn" data-bs-toggle="pill" data-bs-target="#tab-alamat" type="button" role="tab" aria-controls="tab-alamat" aria-selected="<?= ($active_tab === 'alamat') ? 'true' : 'false'; ?>">Daftar Alamat</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link account-nav-pill w-100 rounded-pill py-2.5 px-3 fw-semibold d-flex align-items-center justify-content-between <?= ($active_tab === 'profil') ? 'active' : ''; ?>" id="tab-profil-btn" data-bs-toggle="pill" data-bs-target="#tab-profil" type="button" role="tab" aria-controls="tab-profil" aria-selected="<?= ($active_tab === 'profil') ? 'true' : 'false'; ?>">
-                                <span><i class="bi bi-person-lines-fill me-2"></i><span class="nav-text">Ubah Profil</span></span>
-                                <i class="bi bi-chevron-right small text-muted"></i>
-                            </button>
+                            <button class="nav-link account-tab-link <?= ($active_tab === 'pembayaran') ? 'active' : ''; ?>" id="tab-pembayaran-btn" data-bs-toggle="pill" data-bs-target="#tab-pembayaran" type="button" role="tab" aria-controls="tab-pembayaran" aria-selected="<?= ($active_tab === 'pembayaran') ? 'true' : 'false'; ?>">Pembayaran</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link account-nav-pill w-100 rounded-pill py-2.5 px-3 fw-semibold d-flex align-items-center justify-content-between <?= ($active_tab === 'keamanan') ? 'active' : ''; ?>" id="tab-keamanan-btn" data-bs-toggle="pill" data-bs-target="#tab-keamanan" type="button" role="tab" aria-controls="tab-keamanan" aria-selected="<?= ($active_tab === 'keamanan') ? 'true' : 'false'; ?>">
-                                <span><i class="bi bi-shield-lock-fill me-2"></i><span class="nav-text">Ganti Kata Sandi</span></span>
-                                <i class="bi bi-chevron-right small text-muted"></i>
-                            </button>
+                            <button class="nav-link account-tab-link <?= ($active_tab === 'pesanan') ? 'active' : ''; ?>" id="tab-pesanan-btn" data-bs-toggle="pill" data-bs-target="#tab-pesanan" type="button" role="tab" aria-controls="tab-pesanan" aria-selected="<?= ($active_tab === 'pesanan') ? 'true' : 'false'; ?>">Riwayat Pesanan</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link account-tab-link <?= ($active_tab === 'manajemen') ? 'active' : ''; ?>" id="tab-manajemen-btn" data-bs-toggle="pill" data-bs-target="#tab-manajemen" type="button" role="tab" aria-controls="tab-manajemen" aria-selected="<?= ($active_tab === 'manajemen') ? 'true' : 'false'; ?>">Keamanan</button>
                         </li>
                     </ul>
 
-                    <hr class="my-3 text-muted">
-
-                    <div class="d-grid gap-2">
-                        <a href="keranjang.php" class="btn btn-outline-success rounded-pill btn-sm py-2 fw-semibold d-flex align-items-center justify-content-between px-3">
-                            <span><i class="bi bi-bag-fill me-2"></i>Keranjang Belanja</span>
-                            <span class="badge bg-success rounded-pill"><?= $cart_qty; ?> item</span>
-                        </a>
-                        <?php if ($user['role'] === 'admin'): ?>
-                            <a href="admin/index.php" class="btn btn-success rounded-pill btn-sm py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">
-                                <i class="bi bi-speedometer2"></i>
-                                <span>Panel Administrator</span>
-                            </a>
-                        <?php endif; ?>
-                        <a href="auth/logout.php" class="btn btn-outline-danger rounded-pill btn-sm py-2 fw-semibold d-flex align-items-center justify-content-center gap-2">
-                            <i class="bi bi-box-arrow-right"></i>
-                            <span>Keluar dari Akun</span>
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-12 col-lg-8">
-                <div class="tab-content" id="accountTabsContent">
+                    <div class="tab-content p-3 p-md-4" id="accountTabsContent">
                     <div class="tab-pane fade <?= ($active_tab === 'pesanan') ? 'show active' : ''; ?>" id="tab-pesanan" role="tabpanel" aria-labelledby="tab-pesanan-btn" tabindex="0">
-                        <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 bg-white">
+                        <div class="account-pane-block">
                             <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-4">
                                 <div>
                                     <h5 class="fw-bold text-dark mb-1"><i class="bi bi-clock-history text-success me-2"></i>Riwayat Pesanan Saya</h5>
@@ -275,7 +329,7 @@
                     </div>
 
                     <div class="tab-pane fade <?= ($active_tab === 'alamat') ? 'show active' : ''; ?>" id="tab-alamat" role="tabpanel" aria-labelledby="tab-alamat-btn" tabindex="0">
-                        <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 bg-white">
+                        <div class="account-pane-block">
                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom mb-4">
                                 <div>
                                     <h5 class="fw-bold text-dark mb-1"><i class="bi bi-geo-alt-fill text-success me-2"></i>Daftar Alamat Pengiriman</h5>
@@ -330,61 +384,163 @@
                         </div>
                     </div>
 
-                    <div class="tab-pane fade <?= ($active_tab === 'profil') ? 'show active' : ''; ?>" id="tab-profil" role="tabpanel" aria-labelledby="tab-profil-btn" tabindex="0">
-                        <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 bg-white">
-                            <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-4">
+                    <!-- ==================== BIODATA ==================== -->
+                    <div class="tab-pane fade <?= ($active_tab === 'biodata') ? 'show active' : ''; ?>" id="tab-biodata" role="tabpanel" aria-labelledby="tab-biodata-btn" tabindex="0">
+                        <div class="account-pane-block">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom mb-4">
                                 <div>
-                                    <h5 class="fw-bold text-dark mb-1"><i class="bi bi-person-lines-fill text-success me-2"></i>Perbarui Data Profil</h5>
-                                    <p class="text-muted small mb-0">Kelola informasi pribadi dan kontak akun Anda</p>
+                                    <h5 class="fw-bold text-dark mb-1"><i class="bi bi-person-vcard text-success me-2"></i>Biodata Saya</h5>
+                                    <p class="text-muted small mb-0">Ringkasan data pribadi yang terdaftar pada akun PustakaKu Anda</p>
+                                </div>
+                                <button type="button" class="btn btn-success rounded-pill btn-sm px-3 fw-semibold d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#modalUbahProfil">
+                                    <i class="bi bi-pencil-square"></i>
+                                    <span>Ubah Data</span>
+                                </button>
+                            </div>
+
+                            <div class="d-flex align-items-center gap-3 p-3 rounded-4 bg-light border mb-4">
+                                <?php if ($has_photo): ?>
+                                    <img src="<?= htmlspecialchars($foto_profil_url); ?>" alt="<?= htmlspecialchars($user['nama_lengkap']); ?>" class="rounded-circle object-fit-cover border border-3 border-success-subtle shadow-sm flex-shrink-0" style="width: 64px; height: 64px;" onerror="this.onerror=null;this.src='assets/images/placeholder.png';">
+                                <?php else: ?>
+                                    <div class="rounded-circle bg-success text-white fw-bold d-flex align-items-center justify-content-center border border-3 border-success-subtle shadow-sm flex-shrink-0" style="width: 64px; height: 64px; font-size: 1.5rem;"><?= $initials; ?></div>
+                                <?php endif; ?>
+                                <div class="min-w-0">
+                                    <div class="fw-bold text-dark text-truncate"><?= htmlspecialchars($user['nama_lengkap']); ?></div>
+                                    <div class="text-muted small text-truncate"><?= htmlspecialchars($user['email']); ?></div>
+                                    <span class="badge <?= ($user['role'] === 'admin') ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'; ?> rounded-pill px-2 py-1 mt-1" style="font-size: 10px;">
+                                        <?= ($user['role'] === 'admin') ? 'Administrator' : 'Pelanggan'; ?>
+                                    </span>
                                 </div>
                             </div>
 
-                            <form action="proses_akun.php" method="POST" enctype="multipart/form-data">
-                                <input type="hidden" name="aksi" value="update_profile">
-
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12 col-md-6">
-                                        <label for="nama_lengkap" class="form-label small fw-semibold text-secondary">Nama Lengkap <span class="text-danger">*</span></label>
-                                        <input type="text" class="form-control rounded-3" id="nama_lengkap" name="nama_lengkap" value="<?= htmlspecialchars($user['nama_lengkap']); ?>" required>
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <label for="email" class="form-label small fw-semibold text-secondary">Alamat Email</label>
-                                        <input type="email" class="form-control rounded-3 bg-light" id="email" value="<?= htmlspecialchars($user['email']); ?>" disabled readonly>
-                                        <div class="form-text small" style="font-size: 11px;">Alamat email digunakan sebagai identitas akun dan tidak dapat diubah.</div>
+                            <div class="row g-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="biodata-item h-100">
+                                        <div class="biodata-label">Nama Lengkap</div>
+                                        <div class="biodata-value"><?= htmlspecialchars($user['nama_lengkap']); ?></div>
                                     </div>
                                 </div>
-
-                                <div class="row g-3 mb-3">
-                                    <div class="col-12 col-md-6">
-                                        <label for="no_telepon" class="form-label small fw-semibold text-secondary">Nomor Telepon / WhatsApp</label>
-                                        <input type="tel" class="form-control rounded-3" id="no_telepon" name="no_telepon" placeholder="Contoh: 08123456789" value="<?= htmlspecialchars($user['no_telepon'] ?? ''); ?>">
-                                    </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <label for="foto_profil" class="form-label small fw-semibold text-secondary">Ganti Foto Profil</label>
-                                        <input type="file" class="form-control rounded-3" id="foto_profil" name="foto_profil" accept="image/jpeg,image/png,image/webp">
-                                        <div class="form-text small" style="font-size: 11px;">Format: JPG, PNG, atau WEBP (Maksimal 2MB).</div>
+                                <div class="col-12 col-md-6">
+                                    <div class="biodata-item h-100">
+                                        <div class="biodata-label">Alamat Email</div>
+                                        <div class="biodata-value"><?= htmlspecialchars($user['email']); ?>
+                                            <span class="badge bg-success-subtle text-success rounded-pill ms-1" style="font-size: 9px;"><i class="bi bi-patch-check-fill me-1"></i>Terverifikasi</span>
+                                        </div>
                                     </div>
                                 </div>
-
-                                <div class="d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-success rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2 shadow-sm">
-                                        <i class="bi bi-save"></i>
-                                        <span>Simpan Perubahan Profil</span>
-                                    </button>
+                                <div class="col-12 col-md-6">
+                                    <div class="biodata-item h-100">
+                                        <div class="biodata-label">Nomor Telepon / WhatsApp</div>
+                                        <div class="biodata-value"><?= !empty($user['no_telepon']) ? htmlspecialchars($user['no_telepon']) : '-'; ?></div>
+                                    </div>
                                 </div>
-                            </form>
+                                <div class="col-12 col-md-6">
+                                    <div class="biodata-item h-100">
+                                        <div class="biodata-label">Tanggal Bergabung</div>
+                                        <div class="biodata-value"><?= $joined_date; ?></div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="biodata-item h-100">
+                                        <div class="biodata-label">Alamat Lengkap</div>
+                                        <div class="biodata-value fw-normal">
+                                            <?= !empty($user['alamat_lengkap']) ? nl2br(htmlspecialchars($user['alamat_lengkap'])) : '<span class="text-muted fst-italic">Belum diisi</span>'; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-2 mt-4 pt-3 border-top">
+                                <div class="col-6 col-md-3">
+                                    <div class="account-stat">
+                                        <span class="stat-value"><?= $total_my_orders; ?></span>
+                                        <span class="stat-label">Total Pesanan</span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="account-stat">
+                                        <span class="stat-value"><?= $total_ulasan; ?></span>
+                                        <span class="stat-label">Ulasan</span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="account-stat">
+                                        <span class="stat-value"><?= $total_item_dibeli; ?></span>
+                                        <span class="stat-label">Buku Dibeli</span>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-md-3">
+                                    <div class="account-stat">
+                                        <span class="stat-value" style="font-size: 0.72rem; padding-top: 3px;"><?= formatRupiah($total_belanja); ?></span>
+                                        <span class="stat-label">Total Belanja</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="tab-pane fade <?= ($active_tab === 'keamanan') ? 'show active' : ''; ?>" id="tab-keamanan" role="tabpanel" aria-labelledby="tab-keamanan-btn" tabindex="0">
-                        <div class="card border-0 shadow-sm rounded-4 p-3 p-md-4 bg-white">
+                    <!-- ==================== RIWAYAT PEMBAYARAN ==================== -->
+                    <div class="tab-pane fade <?= ($active_tab === 'pembayaran') ? 'show active' : ''; ?>" id="tab-pembayaran" role="tabpanel" aria-labelledby="tab-pembayaran-btn" tabindex="0">
+                        <div class="account-pane-block">
+                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom mb-4">
+                                <div>
+                                    <h5 class="fw-bold text-dark mb-1"><i class="bi bi-credit-card-2-front text-success me-2"></i>Riwayat Pembayaran</h5>
+                                    <p class="text-muted small mb-0">Catatan transaksi pembayaran yang tercatat pada akun Anda</p>
+                                </div>
+                                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 fw-semibold"><?= formatRupiah($total_belanja); ?> Terbayar</span>
+                            </div>
+
+                            <?php if (empty($orders)): ?>
+                                <div class="text-center py-5 bg-light rounded-4 border">
+                                    <div class="rounded-circle bg-white text-muted d-inline-flex align-items-center justify-content-center mx-auto mb-3 shadow-sm" style="width: 60px; height: 60px;">
+                                        <i class="bi bi-credit-card" style="font-size: 1.8rem;"></i>
+                                    </div>
+                                    <h6 class="fw-bold text-dark mb-1">Belum Ada Pembayaran</h6>
+                                    <p class="text-muted small mb-3">Setiap pembayaran pesanan Anda akan muncul di halaman ini.</p>
+                                    <a href="katalog.php" class="btn btn-success btn-sm rounded-pill px-4 fw-semibold"><i class="bi bi-grid me-1"></i>Mulai Berbelanja</a>
+                                </div>
+                            <?php else: ?>
+                                <div class="d-flex flex-column gap-2">
+                                    <?php foreach ($orders as $pay): ?>
+                                        <?php
+                                            $lunas = in_array($pay['status_pesanan'], ['diproses', 'dikirim', 'selesai'], true);
+                                            $batal = ($pay['status_pesanan'] === 'dibatalkan');
+                                        ?>
+                                        <a href="pesanan_sukses.php?id=<?= (int) $pay['id']; ?>" class="payment-row text-decoration-none d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 <?= $batal ? 'bg-danger-subtle text-danger' : ($lunas ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'); ?>" style="width: 42px; height: 42px;">
+                                                    <i class="bi <?= $batal ? 'bi-x-circle' : ($lunas ? 'bi-check2-circle' : 'bi-hourglass-split'); ?> fs-5"></i>
+                                                </div>
+                                                <div class="min-w-0">
+                                                    <div class="fw-semibold text-dark small font-monospace"><?= htmlspecialchars($pay['nomor_pesanan']); ?></div>
+                                                    <div class="text-muted" style="font-size: 11px;">
+                                                        <i class="bi bi-wallet2 me-1 text-success"></i><?= htmlspecialchars($pay['metode_pembayaran']); ?>
+                                                        &bull; <?= date('d M Y, H:i', strtotime($pay['created_at'])); ?> WIB
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="payment-amount"><?= formatRupiah($pay['total_bayar']); ?></div>
+                                                <span class="badge <?= $batal ? 'bg-danger-subtle text-danger' : ($lunas ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'); ?> rounded-pill px-2 py-1" style="font-size: 10px;">
+                                                    <?= $batal ? 'Dibatalkan' : ($lunas ? 'Lunas' : 'Belum Dibayar'); ?>
+                                                </span>
+                                            </div>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- ==================== MANAJEMEN AKUN ==================== -->
+                    <div class="tab-pane fade <?= ($active_tab === 'manajemen') ? 'show active' : ''; ?>" id="tab-manajemen" role="tabpanel" aria-labelledby="tab-manajemen-btn" tabindex="0">
+                        <div class="account-pane-block">
                             <div class="d-flex align-items-center justify-content-between pb-3 border-bottom mb-4">
                                 <div>
-                                    <h5 class="fw-bold text-dark mb-1"><i class="bi bi-shield-lock-fill text-success me-2"></i>Ganti Kata Sandi</h5>
-                                    <p class="text-muted small mb-0">Pastikan gunakan kata sandi yang aman untuk melindungi akun Anda</p>
+                                    <h5 class="fw-bold text-dark mb-1"><i class="bi bi-shield-lock-fill text-success me-2"></i>Keamanan Akun</h5>
+                                    <p class="text-muted small mb-0">Perbarui kata sandi secara berkala untuk menjaga keamanan akun Anda</p>
                                 </div>
+                                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 fw-semibold"><i class="bi bi-lock-fill me-1"></i>Aktif</span>
                             </div>
 
                             <form action="proses_akun.php" method="POST">
@@ -415,11 +571,92 @@
                                 </div>
                             </form>
                         </div>
+
+                        <div class="account-pane-block">
+                            <div class="pb-3 border-bottom mb-4">
+                                <h6 class="fw-bold text-dark mb-1"><i class="bi bi-gear-fill text-success me-2"></i>Pengaturan & Tindakan Akun</h6>
+                                <p class="text-muted small mb-0">Kelola preferensi akun dan sesi masuk Anda</p>
+                            </div>
+
+                            <div class="d-flex flex-column gap-2">
+                                <button type="button" class="btn btn-light border rounded-4 py-2 px-3 text-start d-flex align-items-center justify-content-between fw-semibold text-dark" data-bs-toggle="modal" data-bs-target="#modalUbahProfil">
+                                    <span><i class="bi bi-person-gear me-2 text-success"></i>Ubah Data Biodata</span>
+                                    <i class="bi bi-chevron-right small text-muted"></i>
+                                </button>
+                                <a href="akun.php?tab=alamat" class="btn btn-light border rounded-4 py-2 px-3 text-start d-flex align-items-center justify-content-between fw-semibold text-dark text-decoration-none">
+                                    <span><i class="bi bi-geo-alt me-2 text-success"></i>Kelola Alamat Pengiriman</span>
+                                    <span class="badge bg-success-subtle text-success rounded-pill"><?= count($alamat_list); ?></span>
+                                </a>
+                                <a href="keranjang.php" class="btn btn-light border rounded-4 py-2 px-3 text-start d-flex align-items-center justify-content-between fw-semibold text-dark text-decoration-none">
+                                    <span><i class="bi bi-bag me-2 text-success"></i>Keranjang Belanja</span>
+                                    <span class="badge bg-success-subtle text-success rounded-pill"><?= $cart_qty; ?> item</span>
+                                </a>
+                                <?php if ($user['role'] === 'admin'): ?>
+                                    <a href="admin/index.php" class="btn btn-light border rounded-4 py-2 px-3 text-start d-flex align-items-center justify-content-between fw-semibold text-dark text-decoration-none">
+                                        <span><i class="bi bi-speedometer2 me-2 text-success"></i>Panel Administrator</span>
+                                        <i class="bi bi-chevron-right small text-muted"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <a href="auth/logout.php" class="btn btn-outline-danger rounded-4 py-2 px-3 text-start d-flex align-items-center justify-content-between fw-semibold" onclick="return confirm('Apakah Anda yakin ingin keluar dari akun ini?');">
+                                    <span><i class="bi bi-box-arrow-right me-2"></i>Keluar dari Akun</span>
+                                    <i class="bi bi-chevron-right small"></i>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
     </main>
+
+    <!-- ==================== MODAL UBAH PROFIL ==================== -->
+    <div class="modal fade" id="modalUbahProfil" tabindex="-1" aria-labelledby="modalUbahProfilLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-dark" id="modalUbahProfilLabel"><i class="bi bi-person-lines-fill text-success me-2"></i>Perbarui Data Profil</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="proses_akun.php" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="aksi" value="update_profile">
+
+                    <div class="modal-body p-4">
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label for="nama_lengkap" class="form-label small fw-semibold text-secondary">Nama Lengkap <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control rounded-3" id="nama_lengkap" name="nama_lengkap" value="<?= htmlspecialchars($user['nama_lengkap']); ?>" required>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="email" class="form-label small fw-semibold text-secondary">Alamat Email</label>
+                                <input type="email" class="form-control rounded-3 bg-light" id="email" value="<?= htmlspecialchars($user['email']); ?>" disabled readonly>
+                                <div class="form-text small" style="font-size: 11px;">Email adalah identitas akun dan tidak dapat diubah.</div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="no_telepon" class="form-label small fw-semibold text-secondary">Nomor Telepon / WhatsApp</label>
+                                <input type="tel" class="form-control rounded-3" id="no_telepon" name="no_telepon" placeholder="Contoh: 08123456789" value="<?= htmlspecialchars($user['no_telepon'] ?? ''); ?>">
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="foto_profil" class="form-label small fw-semibold text-secondary">Ganti Foto Profil</label>
+                                <input type="file" class="form-control rounded-3" id="foto_profil" name="foto_profil" accept="image/jpeg,image/png,image/webp">
+                                <div class="form-text small" style="font-size: 11px;">Format: JPG, PNG, atau WEBP (Maksimal 2MB).</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-top bg-light">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success rounded-pill px-4 fw-semibold"><i class="bi bi-save me-1"></i>Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="modalTambahAlamat" tabindex="-1" aria-labelledby="modalTambahAlamatLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
@@ -570,8 +807,7 @@
                 }
             }
 
-            const tabButtons = document.querySelectorAll('#accountTabs button[data-bs-toggle="pill"]');
-            tabButtons.forEach(btn => {
+            document.querySelectorAll('#accountTabs button[data-bs-toggle="pill"]').forEach(btn => {
                 btn.addEventListener('shown.bs.tab', function (event) {
                     const targetId = event.target.getAttribute('data-bs-target').replace('#tab-', '');
                     const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?tab=' + targetId;

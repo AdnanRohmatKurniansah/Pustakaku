@@ -37,6 +37,17 @@
                     $_SESSION['success'] = "Selamat datang kembali, " . htmlspecialchars($user['nama_lengkap']) . "!";
                     $redirect = $_SESSION['redirect_after_login'] ?? '../index.php';
                     unset($_SESSION['redirect_after_login']);
+
+                    // Nilai lama bisa tersimpan sebagai path relatif tanpa "../" (mis. 'akun.php').
+                    // Karena process_login.php berada di /auth/, path tersebut akan salah arah
+                    // (menjadi /auth/akun.php). Normalisasi agar selalu relatif dari /auth/.
+                    $redirect = trim((string) $redirect);
+                    if ($redirect === '' || preg_match('#^(https?:)?//#i', $redirect) || strpos($redirect, "\n") !== false) {
+                        $redirect = '../index.php';
+                    } elseif (strpos($redirect, '../') !== 0 && strpos($redirect, '/') !== 0) {
+                        $redirect = '../' . ltrim($redirect, '/');
+                    }
+
                     header("Location: " . $redirect);
                     exit;
                 }
