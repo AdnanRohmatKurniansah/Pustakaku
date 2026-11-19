@@ -8,7 +8,7 @@
 
     if (!isset($_SESSION['user_id'])) {
         $_SESSION['error'] = 'Silakan masuk ke akun Anda terlebih dahulu untuk melanjutkan checkout.';
-        $_SESSION['redirect_after_login'] = 'checkout.php';
+        $_SESSION['redirect_after_login'] = '../checkout.php';
         header('Location: auth/login.php');
         exit;
     }
