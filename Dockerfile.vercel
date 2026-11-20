@@ -1,3 +1,8 @@
+FROM composer:2 AS vendor
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --no-progress --optimize-autoloader --ignore-platform-reqs
+
 FROM php:8.2-apache
 
 RUN docker-php-ext-install mysqli pdo_mysql
@@ -11,6 +16,7 @@ RUN echo "PassEnv DB_HOST DB_PORT DB_USER DB_PASS DB_NAME APP_URL MIDTRANS_SERVE
 WORKDIR /var/www/html
 
 COPY . /var/www/html/
+COPY --from=vendor /app/vendor /var/www/html/vendor
 
 EXPOSE 80
 

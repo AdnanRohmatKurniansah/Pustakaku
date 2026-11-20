@@ -32,7 +32,13 @@
         exit();
     }
 
-    if (empty($client_id) || empty($client_secret) || !class_exists('Google_Client')) {
+    if (!class_exists('Google_Client')) {
+        $_SESSION['error'] = 'Library Google Client belum terpasang di server.';
+        header('Location: login.php');
+        exit();
+    }
+
+    if (empty($client_id) || empty($client_secret)) {
         $_SESSION['error'] = 'Kredensial Google OAuth belum lengkap di file .env.';
         header('Location: login.php');
         exit();

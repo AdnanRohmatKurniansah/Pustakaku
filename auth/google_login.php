@@ -25,7 +25,13 @@
 
     $_SESSION['google_oauth_redirect_uri'] = $redirect_uri;
 
-    if (empty($client_id) || empty($client_secret) || !class_exists('Google_Client')) {
+    if (!class_exists('Google_Client')) {
+        $_SESSION['error'] = 'Library Google Client belum terpasang di server. Pastikan dependensi composer telah terinstal.';
+        header('Location: login.php');
+        exit();
+    }
+
+    if (empty($client_id) || empty($client_secret)) {
         $_SESSION['error'] = 'Kredensial Google OAuth belum dikonfigurasi di file .env. Silakan lengkapi GOOGLE_CLIENT_ID dan GOOGLE_CLIENT_SECRET.';
         header('Location: login.php');
         exit();
