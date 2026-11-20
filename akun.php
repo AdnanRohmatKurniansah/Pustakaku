@@ -107,6 +107,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="assets/css/style.css?v=<?= @filemtime(__DIR__ . '/assets/css/style.css') ?: time(); ?>">
     <link rel="stylesheet" href="assets/css/checkout_custom.css?v=<?= @filemtime(__DIR__ . '/assets/css/checkout_custom.css') ?: time(); ?>">
+    <link rel="icon" href="assets/images/favicon.png" type="image/png">
 </head>
 <body class="bg-light">
     <?php include(__DIR__ . '/layouts/navbar.php'); ?>
@@ -136,7 +137,6 @@
         <?php endif; ?>
 
         <div class="row g-4">
-            <!-- ==================== SIDEBAR: PROFIL SAJA ==================== -->
             <div class="col-12 col-lg-4 col-xl-3">
                 <aside class="account-side">
                     <div class="card border-0 shadow-sm rounded-4 bg-white overflow-hidden">
@@ -154,8 +154,6 @@
                                 </span>
                             </div>
                         </div>
-
-                        <!-- Ringkasan angka -->
                         <div class="p-3 border-bottom">
                             <div class="row g-2">
                                 <div class="col-6">
@@ -184,8 +182,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Data ringkas pengguna -->
                         <div class="p-3 border-bottom">
                             <div class="account-info-row pt-0">
                                 <span><i class="bi bi-geo-alt me-2 text-success"></i>Alamat Utama</span>
@@ -206,8 +202,6 @@
                                 <span><?= $joined_date; ?></span>
                             </div>
                         </div>
-
-                        <!-- Status pesanan -->
                         <?php if ($total_my_orders > 0): ?>
                             <div class="p-3 d-flex flex-wrap gap-2 border-bottom">
                                 <span class="badge bg-success-subtle text-success rounded-pill px-2 py-1"><i class="bi bi-check-circle-fill me-1"></i><?= $total_pesanan_selesai; ?> Selesai</span>
@@ -215,8 +209,6 @@
                                 <span class="badge bg-warning-subtle text-warning rounded-pill px-2 py-1"><i class="bi bi-clock-history me-1"></i><?= $total_pesanan_menunggu; ?> Menunggu</span>
                             </div>
                         <?php endif; ?>
-
-                        <!-- Aksi cepat -->
                         <div class="p-3 d-grid gap-2">
                             <a href="keranjang.php" class="btn btn-outline-success rounded-pill btn-sm py-2 fw-semibold d-flex align-items-center justify-content-between px-3">
                                 <span><i class="bi bi-bag-fill me-2"></i>Keranjang Belanja</span>
