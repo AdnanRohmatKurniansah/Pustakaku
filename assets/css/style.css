@@ -1053,19 +1053,11 @@ body {
     font-size: 20px;
 }
 
-/* ==================================================================
-   HALAMAN AKUN SAYA (akun.php)
-   Layout ala Tokopedia: sidebar profil di kiri, navigasi tab
-   horizontal di atas panel konten.
-   ================================================================== */
-
-/* Kolom sidebar akun (sticky di desktop) */
 .account-side {
     position: sticky;
     top: 90px;
 }
 
-/* Avatar kecil pada kartu profil sidebar */
 .account-side-avatar-sm {
     width: 56px;
     height: 56px;
@@ -1081,7 +1073,6 @@ body {
     justify-content: center;
 }
 
-/* Kotak ringkasan statistik (pesanan, alamat, keranjang, ulasan) */
 .account-stat {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -1141,9 +1132,6 @@ body {
     word-break: break-word;
 }
 
-/* ------------------------------------------------------------------
-   Tab horizontal (Biodata Diri | Daftar Alamat | Pembayaran | ...)
-   ------------------------------------------------------------------ */
 .account-tabs {
     display: flex;
     flex-wrap: nowrap;
