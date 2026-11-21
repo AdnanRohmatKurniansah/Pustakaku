@@ -18,9 +18,7 @@
 
     $order_id = mysqli_real_escape_string($conn, $data['order_id']);
     $transaction_status = $data['transaction_status'] ?? '';
-    $payment_type = mysqli_real_escape_string($conn, $data['payment_type'] ?? '');
     $fraud_status = $data['fraud_status'] ?? '';
-    $transaction_id = mysqli_real_escape_string($conn, $data['transaction_id'] ?? '');
 
     $q_order = mysqli_query($conn, "SELECT id, status_pesanan FROM pesanan WHERE nomor_pesanan = '$order_id' LIMIT 1");
     if (!$q_order || mysqli_num_rows($q_order) === 0) {
@@ -62,7 +60,7 @@
     $new_status_esc = mysqli_real_escape_string($conn, $new_status);
     $clean_metode = format_nama_metode_pembayaran($data['payment_type'] ?? '', $data['bank'] ?? '', $data['va_numbers'] ?? []);
     $clean_metode_esc = mysqli_real_escape_string($conn, $clean_metode);
-    mysqli_query($conn, "UPDATE pesanan SET status_pesanan = '$new_status_esc', metode_pembayaran = '$clean_metode_esc', midtrans_transaction_id = '$transaction_id', midtrans_payment_type = '$payment_type', updated_at = NOW() WHERE nomor_pesanan = '$order_id'");
+    mysqli_query($conn, "UPDATE pesanan SET status_pesanan = '$new_status_esc', metode_pembayaran = '$clean_metode_esc', updated_at = NOW() WHERE nomor_pesanan = '$order_id'");
 
     echo json_encode(['ok' => true, 'new_status' => $new_status]);
 ?>
