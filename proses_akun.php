@@ -10,7 +10,7 @@
     }
 
     $user_id = (int) $_SESSION['user_id'];
-    $aksi = $_POST['aksi'] ?? '';
+    $aksi = $_POST['aksi'] ?? $_GET['aksi'] ?? '';
 
     if ($aksi === 'update_profile') {
         $nama_lengkap = trim($_POST['nama_lengkap'] ?? '');
@@ -105,6 +105,24 @@
         if ($pesanan_id_konfirmasi > 0) {
             mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'selesai', updated_at = NOW() WHERE id = '$pesanan_id_konfirmasi' AND user_id = '$user_id'");
             $_SESSION['success'] = "Terima kasih! Pesanan Anda telah ditandai selesai.";
+        }
+        header("Location: akun.php?tab=pesanan");
+        exit();
+    }
+
+    if ($aksi === 'pesan_ulang') {
+        $pesanan_id_ulang = (int) ($_POST['pesanan_id'] ?? $_GET['pesanan_id'] ?? $_GET['id'] ?? 0);
+        if ($pesanan_id_ulang > 0) {
+            require_once __DIR__ . '/cart/proses_keranjang.php';
+            $q_detail = mysqli_query($conn, "SELECT dp.buku_id, dp.jumlah FROM detail_pesanan dp JOIN pesanan p ON dp.pesanan_id = p.id WHERE dp.pesanan_id = '$pesanan_id_ulang' AND p.user_id = '$user_id'");
+            if ($q_detail) {
+                while ($row_dt = mysqli_fetch_assoc($q_detail)) {
+                    cart_add($conn, (int) $row_dt['buku_id'], (int) $row_dt['jumlah']);
+                }
+                $_SESSION['success'] = "Buku dari pesanan sebelumnya telah dimasukkan kembali ke keranjang belanja Anda.";
+                header("Location: keranjang.php");
+                exit();
+            }
         }
         header("Location: akun.php?tab=pesanan");
         exit();

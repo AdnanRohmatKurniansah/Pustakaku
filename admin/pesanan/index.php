@@ -1,7 +1,9 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
 
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         header("Location: ../../auth/login.php");
@@ -25,7 +27,20 @@
 
     $where_sql = implode(' AND ', $where_clauses);
 
-    $q_pesanan = mysqli_query($conn, "SELECT p.*, u.nama_lengkap AS nama_pelanggan, u.email AS email_pelanggan, (SELECT COUNT(*) FROM detail_pesanan dp WHERE dp.pesanan_id = p.id) AS total_item FROM pesanan p LEFT JOIN users u ON p.user_id = u.id WHERE $where_sql ORDER BY p.id DESC");
+    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $limit = 10;
+    $offset = ($page - 1) * $limit;
+
+    $c_q = mysqli_query($conn, "SELECT COUNT(*) AS total FROM pesanan p LEFT JOIN users u ON p.user_id = u.id WHERE $where_sql");
+    $total_data = $c_q ? (int) mysqli_fetch_assoc($c_q)['total'] : 0;
+    $total_pages = max(1, (int) ceil($total_data / $limit));
+
+    $params = $_GET;
+    unset($params['page']);
+    $qs = http_build_query($params);
+    $page_link_prefix = !empty($qs) ? 'index.php?' . $qs . '&page=' : 'index.php?page=';
+
+    $q_pesanan = mysqli_query($conn, "SELECT p.*, u.nama_lengkap AS nama_pelanggan, u.email AS email_pelanggan, (SELECT COUNT(*) FROM detail_pesanan dp WHERE dp.pesanan_id = p.id) AS total_item FROM pesanan p LEFT JOIN users u ON p.user_id = u.id WHERE $where_sql ORDER BY p.id DESC LIMIT $limit OFFSET $offset");
 
     $c_total = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM pesanan"))['c'] ?? 0;
     $c_menunggu = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) AS c FROM pesanan WHERE status_pesanan = 'menunggu_pembayaran'"))['c'] ?? 0;
@@ -160,7 +175,7 @@
                                         </td>
                                     </tr>
                                 <?php else: ?>
-                                    <?php $no = 1; while ($row = mysqli_fetch_assoc($q_pesanan)): ?>
+                                    <?php $no = $offset + 1; while ($row = mysqli_fetch_assoc($q_pesanan)): ?>
                                         <tr>
                                             <td class="text-center fw-semibold text-muted"><?= $no++; ?></td>
                                             <td>
@@ -195,6 +210,35 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <?php if ($total_pages > 1): ?>
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
+                            <div class="small text-muted">
+                                Menampilkan <?= min($offset + 1, $total_data); ?> - <?= min($offset + $limit, $total_data); ?> dari <?= number_format($total_data, 0, ',', '.'); ?> data
+                            </div>
+                            <nav aria-label="Navigasi Halaman Pesanan">
+                                <ul class="pagination pagination-sm mb-0 gap-1">
+                                    <li class="page-item <?= ($page <= 1) ? 'disabled' : ''; ?>">
+                                        <a class="page-link rounded-3 px-3 py-1 <?= ($page <= 1) ? 'text-muted' : 'text-dark'; ?>" href="<?= $page_link_prefix . max(1, $page - 1); ?>">
+                                            <i class="bi bi-chevron-left me-1"></i>Sebelumnya
+                                        </a>
+                                    </li>
+                                    <?php for ($p = 1; $p <= $total_pages; $p++): ?>
+                                        <li class="page-item <?= ($p === $page) ? 'active' : ''; ?>">
+                                            <a class="page-link rounded-3 px-3 py-1 fw-semibold <?= ($p === $page) ? 'bg-success border-success text-white' : 'text-dark'; ?>" href="<?= $page_link_prefix . $p; ?>">
+                                                <?= $p; ?>
+                                            </a>
+                                        </li>
+                                    <?php endfor; ?>
+                                    <li class="page-item <?= ($page >= $total_pages) ? 'disabled' : ''; ?>">
+                                        <a class="page-link rounded-3 px-3 py-1 <?= ($page >= $total_pages) ? 'text-muted' : 'text-dark'; ?>" href="<?= $page_link_prefix . min($total_pages, $page + 1); ?>">
+                                            Berikutnya<i class="bi bi-chevron-right ms-1"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </main>
 

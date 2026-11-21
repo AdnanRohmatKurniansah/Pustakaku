@@ -47,24 +47,65 @@
         $pesanan['metode_pembayaran'] = $clean_metode;
     }
 
+    $midtrans_client_key = $_ENV['MIDTRANS_CLIENT_KEY'] ?? '';
+    $midtrans_is_prod = filter_var($_ENV['MIDTRANS_IS_PRODUCTION'] ?? false, FILTER_VALIDATE_BOOLEAN);
+    $snap_js_url = $midtrans_is_prod ? 'https://app.midtrans.com/snap/snap.js' : 'https://app.sandbox.midtrans.com/snap/snap.js';
+
     $status_param = strtolower($_GET['transaction_status'] ?? '');
     if (in_array($status_param, ['settlement', 'capture', 'success'], true) && $pesanan['status_pesanan'] === 'menunggu_pembayaran') {
         mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'diproses', updated_at = NOW() WHERE id = '$pesanan_id'");
         $pesanan['status_pesanan'] = 'diproses';
+    } elseif (in_array($status_param, ['expire', 'cancel', 'deny'], true) && $pesanan['status_pesanan'] === 'menunggu_pembayaran') {
+        mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'dibatalkan', updated_at = NOW() WHERE id = '$pesanan_id'");
+        $pesanan['status_pesanan'] = 'dibatalkan';
+        $q_rest = mysqli_query($conn, "SELECT buku_id, jumlah FROM detail_pesanan WHERE pesanan_id = '$pesanan_id'");
+        if ($q_rest) {
+            while ($r_rest = mysqli_fetch_assoc($q_rest)) {
+                $b_id = (int) $r_rest['buku_id'];
+                $b_qty = (int) $r_rest['jumlah'];
+                mysqli_query($conn, "UPDATE buku SET stok = stok + $b_qty, updated_at = NOW() WHERE id = '$b_id'");
+            }
+        }
     } elseif ($pesanan['status_pesanan'] === 'menunggu_pembayaran') {
-        $api_data = midtrans_get_transaction_data($pesanan['nomor_pesanan']);
-        if ($api_data && is_array($api_data)) {
-            $api_status = strtolower($api_data['transaction_status'] ?? '');
-            $api_metode = format_nama_metode_pembayaran($api_data['payment_type'] ?? '', $api_data['bank'] ?? '', $api_data['va_numbers'] ?? []);
-            $api_metode_esc = mysqli_real_escape_string($conn, $api_metode);
+        $created_time = strtotime($pesanan['created_at']);
+        $diff_seconds = time() - $created_time;
+        if ($diff_seconds > 86400) {
+            mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'dibatalkan', updated_at = NOW() WHERE id = '$pesanan_id'");
+            $pesanan['status_pesanan'] = 'dibatalkan';
+            $q_rest = mysqli_query($conn, "SELECT buku_id, jumlah FROM detail_pesanan WHERE pesanan_id = '$pesanan_id'");
+            if ($q_rest) {
+                while ($r_rest = mysqli_fetch_assoc($q_rest)) {
+                    $b_id = (int) $r_rest['buku_id'];
+                    $b_qty = (int) $r_rest['jumlah'];
+                    mysqli_query($conn, "UPDATE buku SET stok = stok + $b_qty, updated_at = NOW() WHERE id = '$b_id'");
+                }
+            }
+        } else {
+            $api_data = midtrans_get_transaction_data($pesanan['nomor_pesanan']);
+            if ($api_data && is_array($api_data)) {
+                $api_status = strtolower($api_data['transaction_status'] ?? '');
+                $api_metode = format_nama_metode_pembayaran($api_data['payment_type'] ?? '', $api_data['bank'] ?? '', $api_data['va_numbers'] ?? []);
+                $api_metode_esc = mysqli_real_escape_string($conn, $api_metode);
 
-            if (in_array($api_status, ['settlement', 'capture', 'success'], true)) {
-                mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'diproses', metode_pembayaran = '$api_metode_esc', updated_at = NOW() WHERE id = '$pesanan_id'");
-                $pesanan['status_pesanan'] = 'diproses';
-                $pesanan['metode_pembayaran'] = $api_metode;
-            } elseif (!empty($api_data['payment_type'])) {
-                mysqli_query($conn, "UPDATE pesanan SET metode_pembayaran = '$api_metode_esc', updated_at = NOW() WHERE id = '$pesanan_id'");
-                $pesanan['metode_pembayaran'] = $api_metode;
+                if (in_array($api_status, ['settlement', 'capture', 'success'], true)) {
+                    mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'diproses', metode_pembayaran = '$api_metode_esc', updated_at = NOW() WHERE id = '$pesanan_id'");
+                    $pesanan['status_pesanan'] = 'diproses';
+                    $pesanan['metode_pembayaran'] = $api_metode;
+                } elseif (in_array($api_status, ['expire', 'cancel', 'deny'], true)) {
+                    mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'dibatalkan', updated_at = NOW() WHERE id = '$pesanan_id'");
+                    $pesanan['status_pesanan'] = 'dibatalkan';
+                    $q_rest = mysqli_query($conn, "SELECT buku_id, jumlah FROM detail_pesanan WHERE pesanan_id = '$pesanan_id'");
+                    if ($q_rest) {
+                        while ($r_rest = mysqli_fetch_assoc($q_rest)) {
+                            $b_id = (int) $r_rest['buku_id'];
+                            $b_qty = (int) $r_rest['jumlah'];
+                            mysqli_query($conn, "UPDATE buku SET stok = stok + $b_qty, updated_at = NOW() WHERE id = '$b_id'");
+                        }
+                    }
+                } elseif (!empty($api_data['payment_type'])) {
+                    mysqli_query($conn, "UPDATE pesanan SET metode_pembayaran = '$api_metode_esc', updated_at = NOW() WHERE id = '$pesanan_id'");
+                    $pesanan['metode_pembayaran'] = $api_metode;
+                }
             }
         }
     }
@@ -86,6 +127,9 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/checkout_custom.css">
     <link rel="icon" href="assets/images/favicon.png" type="image/png">
+    <?php if ($pesanan['status_pesanan'] === 'menunggu_pembayaran' && !empty($pesanan['snap_token'])): ?>
+        <script src="<?= $snap_js_url; ?>" data-client-key="<?= htmlspecialchars($midtrans_client_key); ?>"></script>
+    <?php endif; ?>
 </head>
 <body class="bg-light">
     <?php include(__DIR__ . '/layouts/navbar.php'); ?>
@@ -125,13 +169,39 @@
                     </div>
 
                     <?php if ($pesanan['status_pesanan'] === 'menunggu_pembayaran'): ?>
-                        <div class="alert alert-warning border-warning-subtle rounded-4 d-flex align-items-center gap-3 p-3 mb-4">
-                            <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
-                                <i class="bi bi-clock-history fs-4"></i>
+                        <div class="alert alert-warning border-warning-subtle rounded-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 p-3 mb-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                                    <i class="bi bi-clock-history fs-4"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark mb-1">Pesanan Dibuat - Menunggu Pembayaran</div>
+                                    <div class="text-secondary small">Total tagihan Anda adalah <strong><?= formatRupiah($pesanan['total_bayar']); ?></strong>. Segera selesaikan transaksi Anda sebelum batas waktu berakhir.</div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="fw-bold text-dark mb-1">Pesanan Dibuat - Menunggu Konfirmasi Pembayaran</div>
-                                <div class="text-secondary small">Total tagihan Anda adalah <strong><?= formatRupiah($pesanan['total_bayar']); ?></strong>. Sistem kami secara otomatis memperbarui status pesanan Anda begitu pembayaran terverifikasi.</div>
+                            <div class="flex-shrink-0">
+                                <button type="button" id="btnBayarSekarang" class="btn btn-success rounded-pill px-4 py-2 fw-semibold shadow-sm w-100 w-md-auto d-inline-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-wallet2"></i>
+                                    <span>Bayar Sekarang</span>
+                                </button>
+                            </div>
+                        </div>
+                    <?php elseif ($pesanan['status_pesanan'] === 'dibatalkan'): ?>
+                        <div class="alert alert-danger border-danger-subtle rounded-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 p-3 mb-4">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 44px; height: 44px;">
+                                    <i class="bi bi-x-circle fs-4"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-danger mb-1">Pesanan Dibatalkan / Batas Waktu Kadaluwarsa</div>
+                                    <div class="text-secondary small">Batas waktu pembayaran pesanan telah habis atau transaksi dibatalkan. Stok buku telah dikembalikan secara otomatis.</div>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <a href="proses_akun.php?aksi=pesan_ulang&id=<?= $pesanan_id; ?>" class="btn btn-danger rounded-pill px-4 py-2 fw-semibold text-white shadow-sm w-100 w-md-auto d-inline-flex align-items-center justify-content-center gap-2">
+                                    <i class="bi bi-arrow-repeat"></i>
+                                    <span>Pesan Ulang</span>
+                                </a>
                             </div>
                         </div>
                     <?php else: ?>
@@ -235,8 +305,18 @@
                     </div>
 
                     <div class="d-flex flex-wrap gap-2 justify-content-between pt-2">
-                        <a href="katalog.php" class="btn btn-outline-success rounded-pill px-4 fw-semibold"><i class="bi bi-grid me-1"></i>Belanja Lagi</a>
-                        <a href="akun.php?tab=pesanan" class="btn btn-success rounded-pill px-4 fw-semibold"><i class="bi bi-receipt me-1"></i>Lihat Pesanan Saya</a>
+                        <div class="d-flex gap-2">
+                            <a href="katalog.php" class="btn btn-outline-success rounded-pill px-4 fw-semibold"><i class="bi bi-grid me-1"></i>Belanja Lagi</a>
+                            <?php if ($pesanan['status_pesanan'] === 'dibatalkan'): ?>
+                                <a href="proses_akun.php?aksi=pesan_ulang&id=<?= $pesanan_id; ?>" class="btn btn-danger rounded-pill px-4 fw-semibold text-white"><i class="bi bi-arrow-repeat me-1"></i>Pesan Ulang</a>
+                            <?php endif; ?>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <?php if ($pesanan['status_pesanan'] === 'menunggu_pembayaran'): ?>
+                                <button type="button" id="btnBayarSekarangBtm" class="btn btn-success rounded-pill px-4 fw-semibold"><i class="bi bi-wallet2 me-1"></i>Lanjutkan Pembayaran</button>
+                            <?php endif; ?>
+                            <a href="akun.php?tab=pesanan" class="btn btn-outline-secondary rounded-pill px-4 fw-semibold"><i class="bi bi-receipt me-1"></i>Lihat Pesanan Saya</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -245,5 +325,62 @@
 
     <?php include(__DIR__ . '/layouts/footer.php'); ?>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <?php if ($pesanan['status_pesanan'] === 'menunggu_pembayaran' && !empty($pesanan['snap_token'])): ?>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const snapToken = <?= json_encode($pesanan['snap_token']); ?>;
+            const pesananId = <?= (int)$pesanan_id; ?>;
+            const nomorPesanan = <?= json_encode($pesanan['nomor_pesanan']); ?>;
+
+            function bukaSnap() {
+                if (typeof snap !== 'undefined' && snapToken && !snapToken.startsWith('MOCK-SNAP')) {
+                    snap.pay(snapToken, {
+                        onSuccess: function (result) {
+                            const orderNum = (result && result.order_id) ? result.order_id : nomorPesanan;
+                            const transStatus = (result && result.transaction_status) ? result.transaction_status : 'settlement';
+                            let payType = (result && result.payment_type) ? result.payment_type : '';
+                            let bankName = '';
+                            if (result && result.va_numbers && result.va_numbers[0] && result.va_numbers[0].bank) {
+                                bankName = result.va_numbers[0].bank;
+                            } else if (result && result.bank) {
+                                bankName = result.bank;
+                            }
+                            window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(orderNum) + '&transaction_status=' + encodeURIComponent(transStatus) + '&payment_type=' + encodeURIComponent(payType) + '&bank=' + encodeURIComponent(bankName);
+                        },
+                        onPending: function (result) {
+                            const orderNum = (result && result.order_id) ? result.order_id : nomorPesanan;
+                            let payType = (result && result.payment_type) ? result.payment_type : '';
+                            let bankName = '';
+                            if (result && result.va_numbers && result.va_numbers[0] && result.va_numbers[0].bank) {
+                                bankName = result.va_numbers[0].bank;
+                            } else if (result && result.bank) {
+                                bankName = result.bank;
+                            }
+                            window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(orderNum) + '&transaction_status=pending&payment_type=' + encodeURIComponent(payType) + '&bank=' + encodeURIComponent(bankName);
+                        },
+                        onError: function () {
+                            window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(nomorPesanan) + '&transaction_status=failure';
+                        },
+                        onClose: function () {
+                        }
+                    });
+                } else {
+                    window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(nomorPesanan) + '&transaction_status=settlement';
+                }
+            }
+
+            const btn1 = document.getElementById('btnBayarSekarang');
+            if (btn1) btn1.addEventListener('click', bukaSnap);
+
+            const btn2 = document.getElementById('btnBayarSekarangBtm');
+            if (btn2) btn2.addEventListener('click', bukaSnap);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('auto_pay') === '1') {
+                setTimeout(bukaSnap, 300);
+            }
+        });
+    </script>
+    <?php endif; ?>
 </body>
 </html>

@@ -1,14 +1,24 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
 
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         header("Location: ../../auth/login.php");
         exit;
     }
 
-    $query = mysqli_query($conn, "SELECT * FROM supplier ORDER BY id DESC");
+    $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $limit = 10;
+    $offset = ($page - 1) * $limit;
+
+    $c_res = mysqli_query($conn, "SELECT COUNT(*) AS total FROM supplier");
+    $total_data = $c_res ? (int) mysqli_fetch_assoc($c_res)['total'] : 0;
+    $total_pages = max(1, (int) ceil($total_data / $limit));
+
+    $query = mysqli_query($conn, "SELECT * FROM supplier ORDER BY id DESC LIMIT $limit OFFSET $offset");
 ?>
 
 
@@ -63,7 +73,7 @@
                             </thead>
                             <tbody>
                                 <?php if ($query && mysqli_num_rows($query) > 0): ?>
-                                    <?php $no = 1; while ($row = mysqli_fetch_assoc($query)): ?>
+                                    <?php $no = $offset + 1; while ($row = mysqli_fetch_assoc($query)): ?>
                                         <tr>
                                             <td class="fw-semibold text-muted"><?= $no++; ?></td>
                                             
@@ -105,6 +115,35 @@
                             </tbody>
                         </table>
                     </div>
+
+                    <?php if ($total_pages > 1): ?>
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-center gap-3 mt-4 pt-3 border-top">
+                            <div class="small text-muted">
+                                Menampilkan <?= min($offset + 1, $total_data); ?> - <?= min($offset + $limit, $total_data); ?> dari <?= number_format($total_data, 0, ',', '.'); ?> data
+                            </div>
+                            <nav aria-label="Navigasi Halaman Supplier">
+                                <ul class="pagination pagination-sm mb-0 gap-1">
+                                    <li class="page-item <?= ($page <= 1) ? 'disabled' : ''; ?>">
+                                        <a class="page-link rounded-3 px-3 py-1 <?= ($page <= 1) ? 'text-muted' : 'text-dark'; ?>" href="index.php?page=<?= max(1, $page - 1); ?>">
+                                            <i class="bi bi-chevron-left me-1"></i>Sebelumnya
+                                        </a>
+                                    </li>
+                                    <?php for ($p = 1; $p <= $total_pages; $p++): ?>
+                                        <li class="page-item <?= ($p === $page) ? 'active' : ''; ?>">
+                                            <a class="page-link rounded-3 px-3 py-1 fw-semibold <?= ($p === $page) ? 'bg-success border-success text-white' : 'text-dark'; ?>" href="index.php?page=<?= $p; ?>">
+                                                <?= $p; ?>
+                                            </a>
+                                        </li>
+                                    <?php endfor; ?>
+                                    <li class="page-item <?= ($page >= $total_pages) ? 'disabled' : ''; ?>">
+                                        <a class="page-link rounded-3 px-3 py-1 <?= ($page >= $total_pages) ? 'text-muted' : 'text-dark'; ?>" href="index.php?page=<?= min($total_pages, $page + 1); ?>">
+                                            Berikutnya<i class="bi bi-chevron-right ms-1"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </main>
 

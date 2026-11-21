@@ -299,13 +299,19 @@
 
                                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pt-2 border-top">
                                                 <a href="pesanan_sukses.php?id=<?= (int)$ord['id']; ?>" class="btn btn-outline-success btn-sm rounded-pill px-3 fw-semibold"><i class="bi bi-file-earmark-text me-1"></i>Lihat Detail & Invoice</a>
-                                                <?php if ($ord['status_pesanan'] === 'dikirim'): ?>
-                                                    <form action="proses_akun.php" method="POST" class="m-0" onsubmit="return confirm('Apakah pesanan ini sudah Anda terima dengan baik?');">
-                                                        <input type="hidden" name="aksi" value="selesaikan_pesanan">
-                                                        <input type="hidden" name="pesanan_id" value="<?= (int)$ord['id']; ?>">
-                                                        <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold"><i class="bi bi-check2-circle me-1"></i>Konfirmasi Pesanan Diterima</button>
-                                                    </form>
-                                                <?php endif; ?>
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    <?php if ($ord['status_pesanan'] === 'menunggu_pembayaran'): ?>
+                                                        <a href="pesanan_sukses.php?id=<?= (int)$ord['id']; ?>&auto_pay=1" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold"><i class="bi bi-wallet2 me-1"></i>Bayar Sekarang</a>
+                                                    <?php elseif ($ord['status_pesanan'] === 'dibatalkan'): ?>
+                                                        <a href="proses_akun.php?aksi=pesan_ulang&id=<?= (int)$ord['id']; ?>" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold"><i class="bi bi-arrow-repeat me-1"></i>Pesan Ulang</a>
+                                                    <?php elseif ($ord['status_pesanan'] === 'dikirim'): ?>
+                                                        <form action="proses_akun.php" method="POST" class="m-0" onsubmit="return confirm('Apakah pesanan ini sudah Anda terima dengan baik?');">
+                                                            <input type="hidden" name="aksi" value="selesaikan_pesanan">
+                                                            <input type="hidden" name="pesanan_id" value="<?= (int)$ord['id']; ?>">
+                                                            <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 fw-semibold"><i class="bi bi-check2-circle me-1"></i>Konfirmasi Pesanan Diterima</button>
+                                                        </form>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
                                         </div>
                                     <?php endforeach; ?>

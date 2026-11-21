@@ -47,6 +47,18 @@
         $new_status = 'dibatalkan';
     }
 
+    if ($new_status === 'dibatalkan' && $current_status !== 'dibatalkan') {
+        $p_id = (int) $order['id'];
+        $q_rest = mysqli_query($conn, "SELECT buku_id, jumlah FROM detail_pesanan WHERE pesanan_id = '$p_id'");
+        if ($q_rest) {
+            while ($r_rest = mysqli_fetch_assoc($q_rest)) {
+                $b_id = (int) $r_rest['buku_id'];
+                $b_qty = (int) $r_rest['jumlah'];
+                mysqli_query($conn, "UPDATE buku SET stok = stok + $b_qty, updated_at = NOW() WHERE id = '$b_id'");
+            }
+        }
+    }
+
     $new_status_esc = mysqli_real_escape_string($conn, $new_status);
     $clean_metode = format_nama_metode_pembayaran($data['payment_type'] ?? '', $data['bank'] ?? '', $data['va_numbers'] ?? []);
     $clean_metode_esc = mysqli_real_escape_string($conn, $clean_metode);

@@ -1,6 +1,8 @@
 <?php
-    session_start();
     require_once dirname(__DIR__) . '/config/database.php';
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     $token = trim($_GET['token'] ?? '');
     $token_valid = false;

@@ -1,4 +1,5 @@
 <?php
+    date_default_timezone_set('Asia/Jakarta');
     if (ob_get_level() === 0) {
         ob_start();
     }
@@ -74,6 +75,7 @@
     if (!$conn) {
         die("Koneksi database gagal.");
     }
+    mysqli_query($conn, "SET time_zone = '+07:00'");
 
     if (!class_exists('PustakakuSessionHandler')) {
         class PustakakuSessionHandler implements SessionHandlerInterface {
@@ -129,6 +131,7 @@
     if (!function_exists('pustakaku_init_session')) {
         function pustakaku_init_session($conn = null) {
             if (session_status() === PHP_SESSION_NONE) {
+                $is_vercel = (!empty($_ENV['VERCEL'])) || (getenv('VERCEL') !== false) || (strpos($_SERVER['HTTP_HOST'] ?? '', 'vercel.app') !== false);
                 $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
                     || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
                     || (strpos($_SERVER['HTTP_HOST'] ?? '', 'vercel.app') !== false);
@@ -137,6 +140,8 @@
                 ini_set('session.cookie_samesite', 'Lax');
                 if ($is_https) {
                     ini_set('session.cookie_secure', '1');
+                } else {
+                    ini_set('session.cookie_secure', '0');
                 }
 
                 session_set_cookie_params([
@@ -148,7 +153,7 @@
                     'samesite' => 'Lax'
                 ]);
 
-                if ($conn) {
+                if ($conn && $is_vercel) {
                     $handler = new PustakakuSessionHandler($conn);
                     session_set_save_handler($handler, true);
                 }
