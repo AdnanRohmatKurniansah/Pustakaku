@@ -20,17 +20,25 @@
         $user = $res ? mysqli_fetch_assoc($res) : null;
 
         if ($user) {
+            if (($user['provider'] ?? '') === 'google') {
+                $_SESSION['error'] = "Akun ini terdaftar menggunakan akun Google. Silakan masuk menggunakan tombol 'Masuk dengan Google'!";
+                header("Location: login.php");
+                exit;
+            }
+
             if (password_verify($password, $user['password']) || md5($password) === $user['password']) {
                 unset($_SESSION['old_email']);
                 $_SESSION['user_id'] = (int) $user['id'];
                 $_SESSION['nama_lengkap'] = $user['nama_lengkap'];
                 $_SESSION['email'] = $user['email'];
                 $_SESSION['role'] = $user['role'];
+                $_SESSION['provider'] = 'email';
 
                 cart_merge_session($conn, (int) $user['id']);
 
                 if ($user['role'] === 'admin') {
                     $_SESSION['success'] = "Selamat datang kembali, Administrator!";
+                    session_write_close();
                     header("Location: ../admin/index.php");
                     exit;
                 } else {
@@ -38,9 +46,6 @@
                     $redirect = $_SESSION['redirect_after_login'] ?? '../index.php';
                     unset($_SESSION['redirect_after_login']);
 
-                    // Nilai lama bisa tersimpan sebagai path relatif tanpa "../" (mis. 'akun.php').
-                    // Karena process_login.php berada di /auth/, path tersebut akan salah arah
-                    // (menjadi /auth/akun.php). Normalisasi agar selalu relatif dari /auth/.
                     $redirect = trim((string) $redirect);
                     if ($redirect === '' || preg_match('#^(https?:)?//#i', $redirect) || strpos($redirect, "\n") !== false) {
                         $redirect = '../index.php';
@@ -48,6 +53,7 @@
                         $redirect = '../' . ltrim($redirect, '/');
                     }
 
+                    session_write_close();
                     header("Location: " . $redirect);
                     exit;
                 }

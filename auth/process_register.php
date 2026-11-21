@@ -39,9 +39,14 @@
         }
 
         $email_esc = mysqli_real_escape_string($conn, $email);
-        $cek = mysqli_query($conn, "SELECT id FROM users WHERE email = '$email_esc' LIMIT 1");
+        $cek = mysqli_query($conn, "SELECT id, provider FROM users WHERE email = '$email_esc' LIMIT 1");
         if ($cek && mysqli_num_rows($cek) > 0) {
-            $_SESSION['error'] = "Alamat email tersebut sudah terdaftar. Silakan gunakan email lain atau langsung masuk.";
+            $u_exist = mysqli_fetch_assoc($cek);
+            if (($u_exist['provider'] ?? '') === 'google') {
+                $_SESSION['error'] = "Email ini sudah terdaftar menggunakan akun Google. Silakan masuk menggunakan tombol 'Masuk dengan Google'!";
+            } else {
+                $_SESSION['error'] = "Alamat email tersebut sudah terdaftar. Silakan gunakan email lain atau langsung masuk.";
+            }
             header("Location: register.php");
             exit;
         }
@@ -51,7 +56,7 @@
         $hashed = password_hash($password, PASSWORD_BCRYPT);
         $hashed_esc = mysqli_real_escape_string($conn, $hashed);
 
-        $ins = mysqli_query($conn, "INSERT INTO users (nama_lengkap, email, password, role, no_telepon) VALUES ('$nama_esc', '$email_esc', '$hashed_esc', 'pelanggan', '$telp_esc')");
+        $ins = mysqli_query($conn, "INSERT INTO users (nama_lengkap, email, password, role, no_telepon, provider) VALUES ('$nama_esc', '$email_esc', '$hashed_esc', 'pelanggan', '$telp_esc', 'email')");
 
         if ($ins) {
             $new_id = (int) mysqli_insert_id($conn);
@@ -60,10 +65,12 @@
             $_SESSION['nama_lengkap'] = $nama_lengkap;
             $_SESSION['email'] = $email;
             $_SESSION['role'] = 'pelanggan';
+            $_SESSION['provider'] = 'email';
 
             cart_merge_session($conn, $new_id);
 
             $_SESSION['success'] = "Pendaftaran berhasil! Selamat datang di PustakaKu.";
+            session_write_close();
             header("Location: ../index.php");
             exit;
         } else {

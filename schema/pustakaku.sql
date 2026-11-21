@@ -366,6 +366,19 @@ INSERT INTO `user_alamat` VALUES (1,1,'Alamat Utama','Administrator PustakaKu','
 UNLOCK TABLES;
 
 --
+-- Table structure for table `sessions`
+--
+
+DROP TABLE IF EXISTS `sessions`;
+CREATE TABLE `sessions` (
+  `id` varchar(128) NOT NULL,
+  `access` int unsigned NOT NULL,
+  `data` mediumtext NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `access` (`access`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
 -- Table structure for table `users`
 --
 
@@ -377,6 +390,7 @@ CREATE TABLE `users` (
   `nama_lengkap` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `email` varchar(100) COLLATE utf8mb4_general_ci NOT NULL,
   `google_id` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `provider` enum('email','google') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'email',
   `password` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `role` enum('admin','pelanggan') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pelanggan',
   `no_telepon` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,

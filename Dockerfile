@@ -13,6 +13,8 @@ RUN sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/Allo
 
 RUN echo "PassEnv DB_HOST DB_PORT DB_USER DB_PASS DB_NAME APP_URL MIDTRANS_SERVER_KEY MIDTRANS_CLIENT_KEY MIDTRANS_IS_PRODUCTION RAJAONGKIR_API_KEY RAJAONGKIR_ORIGIN_CITY_ID CLOUDINARY_CLOUD_NAME CLOUDINARY_API_KEY CLOUDINARY_API_SECRET SMTP_HOST SMTP_PORT SMTP_USER SMTP_PASS GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET GOOGLE_REDIRECT_URI PORT" >> /etc/apache2/apache2.conf
 
+RUN echo "auto_prepend_file = /var/www/html/config/session_bootstrap.php" >> /usr/local/etc/php/conf.d/sessions.ini
+
 WORKDIR /var/www/html
 
 COPY . /var/www/html/

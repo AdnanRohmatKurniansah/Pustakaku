@@ -17,7 +17,7 @@
     }
 
     $email_esc = mysqli_real_escape_string($conn, $email);
-    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email FROM users WHERE email = '$email_esc' LIMIT 1");
+    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, provider FROM users WHERE email = '$email_esc' LIMIT 1");
 
     if (!$q_user || mysqli_num_rows($q_user) === 0) {
         $_SESSION['error'] = 'Alamat email tidak terdaftar dalam sistem kami.';
@@ -27,6 +27,12 @@
     }
 
     $user = mysqli_fetch_assoc($q_user);
+    if (($user['provider'] ?? '') === 'google') {
+        $_SESSION['error'] = 'Akun ini terdaftar menggunakan akun Google dan tidak memiliki kata sandi. Silakan langsung masuk menggunakan akun Google Anda.';
+        $_SESSION['old_email'] = $email;
+        header("Location: lupa_password.php");
+        exit();
+    }
     $user_id = $user['id'];
     $token = bin2hex(random_bytes(32));
     $token_esc = mysqli_real_escape_string($conn, $token);

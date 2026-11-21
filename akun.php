@@ -15,7 +15,7 @@
     $user_id = (int) $_SESSION['user_id'];
 
     $user = null;
-    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, role, no_telepon, alamat_lengkap, foto_profil, created_at FROM users WHERE id = '$user_id' LIMIT 1");
+    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, role, no_telepon, alamat_lengkap, foto_profil, provider, created_at FROM users WHERE id = '$user_id' LIMIT 1");
     $user = $q_user ? mysqli_fetch_assoc($q_user) : null;
 
     if (!$user) {
@@ -24,6 +24,7 @@
         exit;
     }
 
+    $is_google_user = (($user['provider'] ?? '') === 'google');
     $cart_qty = cart_count($conn);
     $foto_profil_url = resolveImageUrl($user['foto_profil'] ?? '', 'user');
     $has_photo = !empty($user['foto_profil']) && $foto_profil_url !== 'assets/images/placeholder.png';
@@ -395,6 +396,11 @@
                                     <span class="badge <?= ($user['role'] === 'admin') ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'; ?> rounded-pill px-2 py-1 mt-1" style="font-size: 10px;">
                                         <?= ($user['role'] === 'admin') ? 'Administrator' : 'Pelanggan'; ?>
                                     </span>
+                                    <?php if ($is_google_user): ?>
+                                        <span class="badge bg-light text-secondary border rounded-pill px-2 py-1 mt-1" style="font-size: 10px;">
+                                            <i class="bi bi-google text-danger me-1"></i>Google
+                                        </span>
+                                    <?php endif; ?>
                                 </div>
                             </div>
 
@@ -409,7 +415,11 @@
                                     <div class="biodata-item h-100">
                                         <div class="biodata-label">Alamat Email</div>
                                         <div class="biodata-value"><?= htmlspecialchars($user['email']); ?>
-                                            <span class="badge bg-success-subtle text-success rounded-pill ms-1" style="font-size: 9px;"><i class="bi bi-patch-check-fill me-1"></i>Terverifikasi</span>
+                                            <?php if ($is_google_user): ?>
+                                                <span class="badge bg-danger-subtle text-danger rounded-pill ms-1" style="font-size: 9px;"><i class="bi bi-google me-1"></i>Google</span>
+                                            <?php else: ?>
+                                                <span class="badge bg-success-subtle text-success rounded-pill ms-1" style="font-size: 9px;"><i class="bi bi-patch-check-fill me-1"></i>Terverifikasi</span>
+                                            <?php endif; ?>
                                         </div>
                                     </div>
                                 </div>
@@ -526,33 +536,45 @@
                                 <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 fw-semibold"><i class="bi bi-lock-fill me-1"></i>Aktif</span>
                             </div>
 
-                            <form action="proses_akun.php" method="POST">
-                                <input type="hidden" name="aksi" value="update_password">
-
-                                <div class="mb-3">
-                                    <label for="password_lama" class="form-label small fw-semibold text-secondary">Kata Sandi Saat Ini <span class="text-danger">*</span></label>
-                                    <input type="password" class="form-control rounded-3" id="password_lama" name="password_lama" placeholder="Masukkan kata sandi lama Anda" required>
-                                </div>
-
-                                <div class="row g-3 mb-4">
-                                    <div class="col-12 col-md-6">
-                                        <label for="password_baru" class="form-label small fw-semibold text-secondary">Kata Sandi Baru <span class="text-danger">*</span></label>
-                                        <input type="password" class="form-control rounded-3" id="password_baru" name="password_baru" placeholder="Minimal 6 karakter" required minlength="6">
+                            <?php if ($is_google_user): ?>
+                                <div class="alert alert-light border rounded-4 p-4 d-flex align-items-start gap-3 bg-light">
+                                    <div class="rounded-circle bg-white p-2 text-danger shadow-sm flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
+                                        <i class="bi bi-google fs-4"></i>
                                     </div>
-
-                                    <div class="col-12 col-md-6">
-                                        <label for="konfirmasi_password" class="form-label small fw-semibold text-secondary">Ulangi Kata Sandi Baru <span class="text-danger">*</span></label>
-                                        <input type="password" class="form-control rounded-3" id="konfirmasi_password" name="konfirmasi_password" placeholder="Ulangi kata sandi baru" required minlength="6">
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">Masuk dengan Akun Google</h6>
+                                        <p class="text-muted small mb-0">Akun Anda terdaftar dan terautentikasi melalui Google. Kata sandi dikelola langsung oleh akun Google Anda, sehingga fitur ganti kata sandi dinonaktifkan di PustakaKu.</p>
                                     </div>
                                 </div>
+                            <?php else: ?>
+                                <form action="proses_akun.php" method="POST">
+                                    <input type="hidden" name="aksi" value="update_password">
 
-                                <div class="d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-outline-success rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2">
-                                        <i class="bi bi-key-fill"></i>
-                                        <span>Perbarui Kata Sandi</span>
-                                    </button>
-                                </div>
-                            </form>
+                                    <div class="mb-3">
+                                        <label for="password_lama" class="form-label small fw-semibold text-secondary">Kata Sandi Saat Ini <span class="text-danger">*</span></label>
+                                        <input type="password" class="form-control rounded-3" id="password_lama" name="password_lama" placeholder="Masukkan kata sandi lama Anda" required>
+                                    </div>
+
+                                    <div class="row g-3 mb-4">
+                                        <div class="col-12 col-md-6">
+                                            <label for="password_baru" class="form-label small fw-semibold text-secondary">Kata Sandi Baru <span class="text-danger">*</span></label>
+                                            <input type="password" class="form-control rounded-3" id="password_baru" name="password_baru" placeholder="Minimal 6 karakter" required minlength="6">
+                                        </div>
+
+                                        <div class="col-12 col-md-6">
+                                            <label for="konfirmasi_password" class="form-label small fw-semibold text-secondary">Ulangi Kata Sandi Baru <span class="text-danger">*</span></label>
+                                            <input type="password" class="form-control rounded-3" id="konfirmasi_password" name="konfirmasi_password" placeholder="Ulangi kata sandi baru" required minlength="6">
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex justify-content-end">
+                                        <button type="submit" class="btn btn-outline-success rounded-pill px-4 py-2 fw-semibold d-flex align-items-center gap-2">
+                                            <i class="bi bi-key-fill"></i>
+                                            <span>Perbarui Kata Sandi</span>
+                                        </button>
+                                    </div>
+                                </form>
+                            <?php endif; ?>
                         </div>
 
                         <div class="account-pane-block">

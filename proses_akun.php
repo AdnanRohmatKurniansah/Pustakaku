@@ -51,6 +51,15 @@
     }
 
     if ($aksi === 'update_password') {
+        $q_chk = mysqli_query($conn, "SELECT password, provider FROM users WHERE id = '$user_id' LIMIT 1");
+        $user_db = $q_chk ? mysqli_fetch_assoc($q_chk) : null;
+
+        if ($user_db && ($user_db['provider'] ?? '') === 'google') {
+            $_SESSION['error'] = "Pengguna akun Google tidak dapat mengubah kata sandi.";
+            header("Location: akun.php?tab=manajemen");
+            exit();
+        }
+
         $password_lama = $_POST['password_lama'] ?? '';
         $password_baru = $_POST['password_baru'] ?? '';
         $konfirmasi = $_POST['konfirmasi_password'] ?? '';
@@ -72,9 +81,6 @@
             header("Location: akun.php?tab=manajemen");
             exit();
         }
-
-        $q_pass = mysqli_query($conn, "SELECT password FROM users WHERE id = '$user_id' LIMIT 1");
-        $user_db = $q_pass ? mysqli_fetch_assoc($q_pass) : null;
 
         if ($user_db && (password_verify($password_lama, $user_db['password']) || md5($password_lama) === $user_db['password'])) {
             $hashed_new = password_hash($password_baru, PASSWORD_BCRYPT);
