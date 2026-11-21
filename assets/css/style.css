@@ -246,6 +246,13 @@ body {
     font-size: 0.8rem;
 }
 
+.avatar-circle.avatar-photo {
+    object-fit: cover;
+    object-position: center;
+    background: #e9ecef;
+    flex-shrink: 0;
+}
+
 .account-name {
     font-size: 0.8rem;
     font-weight: 600;

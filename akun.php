@@ -15,7 +15,7 @@
     $user_id = (int) $_SESSION['user_id'];
 
     $user = null;
-    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, role, no_telepon, alamat_lengkap, foto_profil, created_at FROM users WHERE id = '$user_id' LIMIT 1");
+    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, role, no_telepon, foto_profil, created_at FROM users WHERE id = '$user_id' LIMIT 1");
     $user = $q_user ? mysqli_fetch_assoc($q_user) : null;
 
     if (!$user) {

@@ -44,7 +44,11 @@
             mysqli_query($conn, "UPDATE users SET nama_lengkap = '$nama_esc', no_telepon = '$telp_esc', updated_at = NOW() WHERE id = '$user_id'");
         }
 
+        $q_foto_now = mysqli_query($conn, "SELECT foto_profil FROM users WHERE id = '$user_id' LIMIT 1");
+        $r_foto_now = $q_foto_now ? mysqli_fetch_assoc($q_foto_now) : null;
+
         $_SESSION['nama_lengkap'] = $nama_lengkap;
+        $_SESSION['foto_profil'] = $r_foto_now['foto_profil'] ?? null;
         $_SESSION['success'] = "Data profil berhasil diperbarui!";
         header("Location: akun.php?tab=biodata");
         exit();

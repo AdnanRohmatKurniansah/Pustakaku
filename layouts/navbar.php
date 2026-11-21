@@ -10,10 +10,27 @@
     if (!isset($conn) || !$conn) {
         require_once __DIR__ . '/../config/database.php';
     }
-    
+
+    require_once __DIR__ . '/../services/cloudinary_service.php';
     require_once __DIR__ . '/../cart/proses_keranjang.php';
 
     $cart_count = isset($conn) ? cart_count($conn) : 0;
+
+    $nav_user = null;
+    if (isset($_SESSION['user_id']) && isset($conn) && $conn) {
+        $nav_user_id = (int) $_SESSION['user_id'];
+        $q_nav_user = mysqli_query($conn, "SELECT nama_lengkap, email, foto_profil FROM users WHERE id = '$nav_user_id' LIMIT 1");
+        if ($q_nav_user) {
+            $nav_user = mysqli_fetch_assoc($q_nav_user);
+        }
+    }
+
+    $nav_nama = $nav_user['nama_lengkap'] ?? ($_SESSION['nama_lengkap'] ?? '');
+    $nav_email = $nav_user['email'] ?? ($_SESSION['email'] ?? '');
+    $nav_foto_raw = trim((string) ($nav_user['foto_profil'] ?? ''));
+    $nav_has_photo = $nav_foto_raw !== '' && resolveImageUrl($nav_foto_raw, 'user') !== 'assets/images/placeholder.png';
+    $nav_foto_url = $nav_has_photo ? resolveImageUrl($nav_foto_raw, 'user') : '';
+    $nav_inisial = strtoupper(substr($nav_nama !== '' ? $nav_nama : 'U', 0, 1));
 
     $nav_kategori = [];
     if (isset($conn) && $conn) {
@@ -69,14 +86,18 @@
                 <?php if (isset($_SESSION['user_id'])): ?>
                     <div class="dropdown">
                         <button class="account-button" id="accountDropdownBtn" type="button" aria-expanded="false" aria-label="Menu akun">
-                            <span class="avatar-circle"><?= strtoupper(substr($_SESSION['nama_lengkap'] ?? 'U', 0, 1)); ?></span>
+                            <?php if ($nav_has_photo): ?>
+                                <img src="<?= htmlspecialchars($nav_foto_url, ENT_QUOTES, 'UTF-8'); ?>" alt="<?= htmlspecialchars($nav_nama, ENT_QUOTES, 'UTF-8'); ?>" class="avatar-circle avatar-photo" onerror="this.outerHTML='<span class=\'avatar-circle\'>' + this.alt.charAt(0).toUpperCase() + '</span>';">
+                            <?php else: ?>
+                                <span class="avatar-circle"><?= htmlspecialchars($nav_inisial, ENT_QUOTES, 'UTF-8'); ?></span>
+                            <?php endif; ?>
                             <i class="bi bi-chevron-down small"></i>
                         </button>
 
                         <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-4 p-2" id="accountDropdownMenu" aria-labelledby="accountDropdownBtn">
                             <li class="px-3 py-2 border-bottom">
-                                <div class="fw-bold small"><?= htmlspecialchars($_SESSION['nama_lengkap'] ?? ''); ?></div>
-                                <div class="text-muted small"><?= htmlspecialchars($_SESSION['email'] ?? ''); ?></div>
+                                <div class="fw-bold small"><?= htmlspecialchars($nav_nama, ENT_QUOTES, 'UTF-8'); ?></div>
+                                <div class="text-muted small"><?= htmlspecialchars($nav_email, ENT_QUOTES, 'UTF-8'); ?></div>
                             </li>
 
                             <?php if (($_SESSION['role'] ?? '') === 'admin'): ?>
