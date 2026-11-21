@@ -215,15 +215,15 @@
                         <div class="d-flex gap-2 mb-3">
                             <div class="flex-fill">
                                 <input type="radio" class="btn-check courier-choice" name="pilih_kurir" id="kurir_jne" value="jne" checked>
-                                <label class="btn btn-outline-success w-100 py-2 rounded-3 fw-semibold small" for="kurir_jne">JNE Express</label>
+                                <label class="btn btn-outline-success w-100 py-1 rounded-3 fw-semibold small" for="kurir_jne">JNE Express</label>
                             </div>
                             <div class="flex-fill">
                                 <input type="radio" class="btn-check courier-choice" name="pilih_kurir" id="kurir_pos" value="pos">
-                                <label class="btn btn-outline-success w-100 py-2 rounded-3 fw-semibold small" for="kurir_pos">POS Indonesia</label>
+                                <label class="btn btn-outline-success w-100 py-1 rounded-3 fw-semibold small" for="kurir_pos">POS Indonesia</label>
                             </div>
                             <div class="flex-fill">
                                 <input type="radio" class="btn-check courier-choice" name="pilih_kurir" id="kurir_tiki" value="tiki">
-                                <label class="btn btn-outline-success w-100 py-2 rounded-3 fw-semibold small" for="kurir_tiki">TIKI</label>
+                                <label class="btn btn-outline-success w-100 py-1 rounded-3 fw-semibold small" for="kurir_tiki">TIKI</label>
                             </div>
                         </div>
 
@@ -264,7 +264,7 @@
                             <i class="bi bi-chat-left-text text-success"></i>
                             <h6 class="fw-bold text-dark mb-0 small">Catatan Pesanan (Opsional)</h6>
                         </div>
-                        <textarea class="form-control rounded-3" id="catatan_pembeli" name="catatan_pembeli" rows="2" placeholder="Tuliskan catatan khusus untuk penjual (misal: mohon packing kardus tebal)"></textarea>
+                        <textarea class="form-control rounded-3" id="catatan_pembeli" name="catatan_pembeli" rows="3" placeholder="Tuliskan catatan khusus untuk penjual (misal: mohon packing kardus tebal)"></textarea>
                     </div>
                 </div>
 

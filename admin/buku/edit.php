@@ -72,29 +72,6 @@
                         <input type="hidden" name="id" value="<?= $buku['id']; ?>">
 
                         <div class="row g-3">
-                            <div class="col-12 col-md-5">
-                                <label class="form-label small fw-semibold text-secondary d-block">Foto Sampul Utama Saat Ini</label>
-                                <?php 
-                                    $prim_img = resolveImageUrl($buku['gambar'] ?? '', 'buku');
-                                    if (strpos($prim_img, 'assets/') === 0) {
-                                        $prim_img = '../../' . $prim_img;
-                                    }
-                                ?>
-                                <div class="d-flex align-items-center gap-3 p-2 bg-light border rounded-3">
-                                    <img src="<?= htmlspecialchars($prim_img); ?>" alt="Sampul Utama" class="rounded-2 border object-fit-cover shadow-sm" style="width: 60px; height: 80px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
-                                    <div>
-                                        <span class="badge bg-success mb-1"><i class="bi bi-star-fill me-1"></i>Foto Utama (Tabel Buku)</span>
-                                        <div class="text-muted small" style="font-size: 11px;">Tampil di katalog, etalase & pencarian</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="col-12 col-md-7">
-                                <label for="gambar_utama" class="form-label small fw-semibold text-secondary">Ganti Foto Sampul Utama (Opsional)</label>
-                                <input type="file" class="form-control" id="gambar_utama" name="gambar_utama" accept="image/*">
-                                <div class="form-text small">Pilih file baru jika ingin mengganti foto utama buku ini. Biarkan kosong jika tidak diubah.</div>
-                            </div>
-
                             <div class="col-12 col-md-8">
                                 <label for="judul" class="form-label small fw-semibold text-secondary">Judul Buku / Nama Produk <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="judul" name="judul" value="<?= htmlspecialchars($buku['judul']); ?>" required autofocus>
@@ -153,6 +130,18 @@
                             <div class="col-12">
                                 <label for="deskripsi" class="form-label small fw-semibold text-secondary">Sinopsis / Deskripsi Buku <span class="text-danger">*</span></label>
                                 <textarea class="form-control" id="deskripsi" name="deskripsi" rows="4" required><?= htmlspecialchars($buku['deskripsi'] ?? ''); ?></textarea>
+                            </div>
+
+                            <div class="col-12 col-md-12">
+                                <?php 
+                                    $prim_img = resolveImageUrl($buku['gambar'] ?? '', 'buku');
+                                    if (strpos($prim_img, 'assets/') === 0) {
+                                        $prim_img = '../../' . $prim_img;
+                                    }
+                                ?>
+                                <img src="<?= htmlspecialchars($prim_img); ?>" alt="Sampul Utama" class="rounded-2 mb-2 border object-fit-cover shadow-sm" style="width: 100px; height: 130px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
+                                <input type="file" class="form-control" id="gambar_utama" name="gambar_utama" accept="image/*">
+                                <div class="form-text small">Pilih file baru jika ingin mengganti foto utama buku ini. Biarkan kosong jika tidak diubah.</div>
                             </div>
                         </div>
 
@@ -217,7 +206,6 @@
                                             <td class="text-center">
                                                 <div class="d-inline-flex gap-2">
                                                     <a href="proses_edit.php?action=set_primary&buku_id=<?= $buku['id']; ?>&gambar_id=<?= $item['id']; ?>" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" title="Jadikan Sampul Utama">
-                                                        <i class="bi bi-star"></i>
                                                         <span>Jadikan Utama</span>
                                                     </a>
                                                     <a href="proses_edit.php?action=delete_gambar&buku_id=<?= $buku['id']; ?>&gambar_id=<?= $item['id']; ?>" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" onclick="return confirm('Apakah Anda yakin ingin menghapus foto tambahan ini?');" title="Hapus Foto">
@@ -237,7 +225,7 @@
                         <h6 class="fw-bold text-dark mb-2"><i class="bi bi-cloud-arrow-up text-success me-2"></i>Tambah Foto Tambahan Baru</h6>
                         <form action="proses_edit.php?aksi=tambah_gambar_tambahan" method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="buku_id" value="<?= $buku['id']; ?>">
-                            <div class="row g-2 align-items-center">
+                            <div class="row g-2 align-items-start">
                                 <div class="col-12 col-md-9">
                                     <input type="file" class="form-control" name="gambar_tambahan[]" multiple accept="image/*" required>
                                     <div class="form-text small">Pilih satu atau beberapa foto tambahan baru untuk ditambahkan ke galeri produk ini.</div>
