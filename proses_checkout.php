@@ -50,18 +50,35 @@
     $alamat_pengiriman = trim($_POST['alamat_pengiriman'] ?? '');
     $kurir_service = trim($_POST['kurir_service'] ?? 'Kurir Reguler');
     $ongkos_kirim = (float) ($_POST['ongkos_kirim'] ?? 0);
-    $metode_pembayaran = trim($_POST['metode_pembayaran'] ?? 'Midtrans');
+    $metode_pembayaran = trim($_POST['metode_pembayaran'] ?? 'Transfer Bank / QRIS');
     $catatan_pembeli = trim($_POST['catatan_pembeli'] ?? '');
 
-    if ($alamat_id > 0) {
-        $q_al = mysqli_query($conn, "SELECT * FROM user_alamat WHERE id = '$alamat_id' AND user_id = '$user_id' LIMIT 1");
-        if ($q_al && mysqli_num_rows($q_al) > 0) {
-            $al_row = mysqli_fetch_assoc($q_al);
-            $nama_penerima = $al_row['nama_penerima'];
-            $no_telepon = $al_row['no_telepon'];
-            $kec_txt = !empty($al_row['kecamatan']) ? 'Kec. ' . $al_row['kecamatan'] . ', ' : '';
-            $alamat_pengiriman = $al_row['alamat_lengkap'] . ', ' . $kec_txt . $al_row['kota_nama'] . ', ' . $al_row['provinsi_nama'] . ' ' . $al_row['kode_pos'];
+    if ($alamat_id <= 0) {
+        $q_al_def = mysqli_query($conn, "SELECT id FROM user_alamat WHERE user_id = '$user_id' ORDER BY is_primary DESC, id ASC LIMIT 1");
+        if ($q_al_def && $r_def = mysqli_fetch_assoc($q_al_def)) {
+            $alamat_id = (int)$r_def['id'];
         }
+    }
+
+    if ($alamat_id <= 0) {
+        $err_msg = 'Silakan tambahkan alamat pengiriman terlebih dahulu.';
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['ok' => false, 'message' => $err_msg]);
+            exit();
+        }
+        $_SESSION['error'] = $err_msg;
+        header('Location: checkout.php');
+        exit();
+    }
+
+    $q_al = mysqli_query($conn, "SELECT * FROM user_alamat WHERE id = '$alamat_id' AND user_id = '$user_id' LIMIT 1");
+    if ($q_al && mysqli_num_rows($q_al) > 0) {
+        $al_row = mysqli_fetch_assoc($q_al);
+        $nama_penerima = $al_row['nama_penerima'];
+        $no_telepon = $al_row['no_telepon'];
+        $kec_txt = !empty($al_row['kecamatan']) ? 'Kec. ' . $al_row['kecamatan'] . ', ' : '';
+        $alamat_pengiriman = $al_row['alamat_lengkap'] . ', ' . $kec_txt . $al_row['kota_nama'] . ', ' . $al_row['provinsi_nama'] . ' ' . $al_row['kode_pos'];
     }
 
     if (empty($nama_penerima) || empty($no_telepon) || empty($alamat_pengiriman)) {
@@ -149,7 +166,6 @@
     $nomor_pesanan = 'ORD-' . date('Ymd') . '-' . strtoupper(substr(uniqid(), -5));
     $alamat_pengiriman_lengkap = $nama_penerima . " (" . $no_telepon . ")\n" . $alamat_pengiriman;
 
-    $is_midtrans = (stripos($metode_pembayaran, 'Midtrans') !== false || true);
     $status_pesanan = 'menunggu_pembayaran';
 
     $customer_details = [
@@ -181,7 +197,7 @@
 
     $nomor_pesanan_esc = mysqli_real_escape_string($conn, $nomor_pesanan);
     $alamat_esc = mysqli_real_escape_string($conn, $alamat_pengiriman_lengkap);
-    $metode_esc = mysqli_real_escape_string($conn, 'Midtrans');
+    $metode_esc = mysqli_real_escape_string($conn, !empty($metode_pembayaran) ? $metode_pembayaran : 'Transfer Bank / QRIS');
     $kurir_esc = mysqli_real_escape_string($conn, $kurir_service);
     $catatan_esc = mysqli_real_escape_string($conn, $catatan_pembeli);
     $alamat_id_val = ($alamat_id > 0) ? "'$alamat_id'" : "NULL";

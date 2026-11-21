@@ -75,5 +75,88 @@
         die("Koneksi database gagal.");
     }
 
+    if (!class_exists('PustakakuSessionHandler')) {
+        class PustakakuSessionHandler implements SessionHandlerInterface {
+            private $conn;
+
+            public function __construct($conn) {
+                $this->conn = $conn;
+            }
+
+            public function open($path, $name): bool {
+                return true;
+            }
+
+            public function close(): bool {
+                return true;
+            }
+
+            public function read($id): string|false {
+                if (!$this->conn) return '';
+                $id_esc = mysqli_real_escape_string($this->conn, $id);
+                $res = mysqli_query($this->conn, "SELECT data FROM sessions WHERE id = '$id_esc' AND access > " . (time() - 604800) . " LIMIT 1");
+                if ($res && $row = mysqli_fetch_assoc($res)) {
+                    return (string) $row['data'];
+                }
+                return '';
+            }
+
+            public function write($id, $data): bool {
+                if (!$this->conn) return false;
+                $id_esc = mysqli_real_escape_string($this->conn, $id);
+                $data_esc = mysqli_real_escape_string($this->conn, $data);
+                $time = time();
+                $q = "INSERT INTO sessions (id, access, data) VALUES ('$id_esc', $time, '$data_esc')
+                      ON DUPLICATE KEY UPDATE access = $time, data = '$data_esc'";
+                return (bool) mysqli_query($this->conn, $q);
+            }
+
+            public function destroy($id): bool {
+                if (!$this->conn) return false;
+                $id_esc = mysqli_real_escape_string($this->conn, $id);
+                return (bool) mysqli_query($this->conn, "DELETE FROM sessions WHERE id = '$id_esc'");
+            }
+
+            public function gc($max_lifetime): int|false {
+                if (!$this->conn) return false;
+                $old = time() - (int) $max_lifetime;
+                $res = mysqli_query($this->conn, "DELETE FROM sessions WHERE access < $old");
+                return $res ? mysqli_affected_rows($this->conn) : false;
+            }
+        }
+    }
+
+    if (!function_exists('pustakaku_init_session')) {
+        function pustakaku_init_session($conn = null) {
+            if (session_status() === PHP_SESSION_NONE) {
+                $is_https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+                    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https')
+                    || (strpos($_SERVER['HTTP_HOST'] ?? '', 'vercel.app') !== false);
+
+                ini_set('session.cookie_httponly', '1');
+                ini_set('session.cookie_samesite', 'Lax');
+                if ($is_https) {
+                    ini_set('session.cookie_secure', '1');
+                }
+
+                session_set_cookie_params([
+                    'lifetime' => 604800,
+                    'path' => '/',
+                    'domain' => '',
+                    'secure' => $is_https,
+                    'httponly' => true,
+                    'samesite' => 'Lax'
+                ]);
+
+                if ($conn) {
+                    $handler = new PustakakuSessionHandler($conn);
+                    session_set_save_handler($handler, true);
+                }
+            }
+        }
+    }
+
+    pustakaku_init_session($conn);
+
     require_once __DIR__ . '/helper.php';
 ?>

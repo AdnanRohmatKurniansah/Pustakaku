@@ -48,7 +48,9 @@
     }
 
     $new_status_esc = mysqli_real_escape_string($conn, $new_status);
-    mysqli_query($conn, "UPDATE pesanan SET status_pesanan = '$new_status_esc', midtrans_transaction_id = '$transaction_id', midtrans_payment_type = '$payment_type', updated_at = NOW() WHERE nomor_pesanan = '$order_id'");
+    $clean_metode = format_nama_metode_pembayaran($data['payment_type'] ?? '', $data['bank'] ?? '', $data['va_numbers'] ?? []);
+    $clean_metode_esc = mysqli_real_escape_string($conn, $clean_metode);
+    mysqli_query($conn, "UPDATE pesanan SET status_pesanan = '$new_status_esc', metode_pembayaran = '$clean_metode_esc', midtrans_transaction_id = '$transaction_id', midtrans_payment_type = '$payment_type', updated_at = NOW() WHERE nomor_pesanan = '$order_id'");
 
     echo json_encode(['ok' => true, 'new_status' => $new_status]);
 ?>

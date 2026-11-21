@@ -16,13 +16,6 @@
         if ($alamat_id > 0) {
             mysqli_query($conn, "UPDATE user_alamat SET is_primary = 0 WHERE user_id = '$user_id'");
             mysqli_query($conn, "UPDATE user_alamat SET is_primary = 1, updated_at = NOW() WHERE id = '$alamat_id' AND user_id = '$user_id'");
-
-            $q_al = mysqli_query($conn, "SELECT alamat_lengkap, kota_nama, provinsi_nama, kode_pos FROM user_alamat WHERE id = '$alamat_id' LIMIT 1");
-            if ($q_al && mysqli_num_rows($q_al) > 0) {
-                $al_row = mysqli_fetch_assoc($q_al);
-                $full_text = mysqli_real_escape_string($conn, $al_row['alamat_lengkap'] . ', ' . $al_row['kota_nama'] . ', ' . $al_row['provinsi_nama'] . ' ' . $al_row['kode_pos']);
-                mysqli_query($conn, "UPDATE users SET alamat_lengkap = '$full_text' WHERE id = '$user_id'");
-            }
             $_SESSION['success'] = "Alamat utama berhasil diubah.";
         }
         $redirect = $_GET['redirect'] ?? 'akun.php?tab=alamat';
@@ -88,8 +81,7 @@
 
         if (mysqli_query($conn, $q_insert)) {
             if ($is_primary == 1) {
-                $full_text = mysqli_real_escape_string($conn, $alamat . ', ' . $kota_nama . ', ' . $provinsi_nama . ' ' . $kode_pos);
-                mysqli_query($conn, "UPDATE users SET alamat_lengkap = '$full_text', no_telepon = COALESCE(no_telepon, '$telepon') WHERE id = '$user_id'");
+                mysqli_query($conn, "UPDATE users SET no_telepon = COALESCE(no_telepon, '$telepon') WHERE id = '$user_id'");
             }
             $_SESSION['success'] = "Alamat baru berhasil ditambahkan.";
         } else {
