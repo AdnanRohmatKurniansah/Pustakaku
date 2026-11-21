@@ -69,10 +69,6 @@
                                         <label for="no_telepon" class="form-label small fw-semibold text-secondary">No Telepon</label>
                                         <input type="text" class="form-control" id="no_telepon" name="no_telepon" value="<?= htmlspecialchars($user['no_telepon'] ?? ''); ?>">
                                     </div>
-                                    <div class="col-12 col-md-6">
-                                        <label for="alamat_lengkap" class="form-label small fw-semibold text-secondary">Alamat Kantor / Domisili</label>
-                                        <input type="text" class="form-control" id="alamat_lengkap" name="alamat_lengkap" value="<?= htmlspecialchars($user['alamat_lengkap'] ?? ''); ?>">
-                                    </div>
                                     <div class="col-12">
                                         <label class="form-label small fw-semibold text-secondary d-block">Foto Profil</label>
                                         <div class="d-flex align-items-center gap-3">

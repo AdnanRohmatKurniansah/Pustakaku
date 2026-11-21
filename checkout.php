@@ -147,11 +147,11 @@
             ?>
             <input type="hidden" name="alamat_id" id="inputAlamatId" value="<?= $selected_alamat ? (int)$selected_alamat['id'] : 0; ?>">
             <input type="hidden" name="nama_penerima" id="inputNamaPenerima" value="<?= $selected_alamat ? htmlspecialchars($selected_alamat['nama_penerima']) : htmlspecialchars($user['nama_lengkap']); ?>">
-            <input type="hidden" name="no_telepon" id="inputNoTelepon" value="<?= $selected_alamat ? htmlspecialchars($selected_alamat['no_telepon']) : htmlspecialchars($user['no_telepon']); ?>">
-            <input type="hidden" name="alamat_pengiriman" id="inputAlamatPengiriman" value="<?= $selected_alamat ? htmlspecialchars($selected_alamat_full) : htmlspecialchars($user['alamat_lengkap'] ?? ''); ?>">
+            <input type="hidden" name="no_telepon" id="inputNoTelepon" value="<?= $selected_alamat ? htmlspecialchars($selected_alamat['no_telepon']) : htmlspecialchars($user['no_telepon'] ?? ''); ?>">
+            <input type="hidden" name="alamat_pengiriman" id="inputAlamatPengiriman" value="<?= $selected_alamat ? htmlspecialchars($selected_alamat_full) : ''; ?>">
             <input type="hidden" name="kurir_service" id="inputKurirService" value="<?= htmlspecialchars($initial_service_name); ?>">
             <input type="hidden" name="ongkos_kirim" id="inputOngkir" value="<?= $initial_cost; ?>">
-            <input type="hidden" name="metode_pembayaran" value="Midtrans">
+            <input type="hidden" name="metode_pembayaran" value="Transfer Bank / QRIS">
             <input type="hidden" id="currentCityId" value="<?= $default_city_id; ?>">
             <input type="hidden" id="totalBeratPaket" value="<?= $total_berat; ?>">
 
@@ -186,19 +186,15 @@
                                 <div class="text-muted small" id="displayAlamatBaris2"><?= !empty($selected_alamat['kecamatan']) ? 'Kec. ' . htmlspecialchars($selected_alamat['kecamatan']) . ', ' : ''; ?><?= htmlspecialchars($selected_alamat['kota_nama']); ?>, <?= htmlspecialchars($selected_alamat['provinsi_nama']); ?> <?= htmlspecialchars($selected_alamat['kode_pos']); ?></div>
                             </div>
                         <?php else: ?>
-                            <div class="row g-3">
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label small fw-semibold text-secondary">Nama Penerima <span class="text-danger">*</span></label>
-                                    <input type="text" class="form-control rounded-3" value="<?= htmlspecialchars($user['nama_lengkap']); ?>" oninput="document.getElementById('inputNamaPenerima').value = this.value;" required>
+                            <div class="p-4 rounded-4 bg-light border text-center" id="emptyAlamatNotice">
+                                <div class="rounded-circle bg-white text-success shadow-sm d-inline-flex align-items-center justify-content-center mx-auto mb-3" style="width: 54px; height: 54px;">
+                                    <i class="bi bi-geo-alt-fill fs-3"></i>
                                 </div>
-                                <div class="col-12 col-md-6">
-                                    <label class="form-label small fw-semibold text-secondary">Nomor Telepon / WA <span class="text-danger">*</span></label>
-                                    <input type="tel" class="form-control rounded-3" value="<?= htmlspecialchars($user['no_telepon'] ?? ''); ?>" oninput="document.getElementById('inputNoTelepon').value = this.value;" required>
-                                </div>
-                                <div class="col-12">
-                                    <label class="form-label small fw-semibold text-secondary">Alamat Lengkap <span class="text-danger">*</span></label>
-                                    <textarea class="form-control rounded-3" rows="2" oninput="document.getElementById('inputAlamatPengiriman').value = this.value;" required><?= htmlspecialchars($user['alamat_lengkap'] ?? ''); ?></textarea>
-                                </div>
+                                <h6 class="fw-bold text-dark mb-1">Belum Ada Alamat Pengiriman</h6>
+                                <p class="text-muted small mb-3">Tambahkan alamat pengiriman Anda terlebih dahulu agar sistem dapat menghitung ongkos kirim dan mengirimkan pesanan ke lokasi Anda.</p>
+                                <button type="button" class="btn btn-success rounded-pill px-4 py-2 fw-semibold btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalTambahAlamatCheckout">
+                                    <i class="bi bi-plus-circle me-1"></i>Tambah Alamat Sekarang
+                                </button>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -232,7 +228,12 @@
                         </div>
 
                         <div class="d-flex flex-column gap-2" id="shippingServicesList">
-                            <?php if (!empty($initial_services)): ?>
+                            <?php if (empty($selected_alamat)): ?>
+                                <div class="text-muted small p-4 bg-light rounded-4 border text-center">
+                                    <i class="bi bi-info-circle text-success fs-5 d-block mb-1"></i>
+                                    Silakan tambahkan alamat pengiriman di atas terlebih dahulu untuk menampilkan pilihan kurir dan tarif ongkos kirim.
+                                </div>
+                            <?php elseif (!empty($initial_services)): ?>
                                 <?php foreach ($initial_services as $idx => $srv): ?>
                                     <?php 
                                         $is_srv_checked = ($idx === 0);
@@ -317,9 +318,14 @@
                             <span class="fw-bold text-success fs-4" id="labelTotalBayar"><?= formatRupiah($total_bayar); ?></span>
                         </div>
 
-                        <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-bold fs-6 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnSubmitCheckout">
+                        <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-bold fs-6 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnSubmitCheckout" <?= empty($selected_alamat) ? 'disabled' : ''; ?>>
                             <span>Bayar Sekarang</span>
                         </button>
+                        <?php if (empty($selected_alamat)): ?>
+                            <div class="text-danger small mt-2 text-center" id="alertTambahAlamatDulu" style="font-size: 11px;">
+                                <i class="bi bi-exclamation-circle me-1"></i>Silakan tambahkan alamat pengiriman terlebih dahulu untuk melanjutkan pembayaran.
+                            </div>
+                        <?php endif; ?>
 
                         <div class="text-center text-muted small mt-3 d-flex align-items-center justify-content-center gap-1" style="font-size: 11px;">
                             <i class="bi bi-shield-check text-success fs-6"></i>
@@ -716,11 +722,25 @@
                                 onSuccess: function (result) {
                                     const orderNum = (result && result.order_id) ? result.order_id : nomorPesanan;
                                     const transStatus = (result && result.transaction_status) ? result.transaction_status : 'settlement';
-                                    window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(orderNum) + '&transaction_status=' + encodeURIComponent(transStatus);
+                                    let payType = (result && result.payment_type) ? result.payment_type : '';
+                                    let bankName = '';
+                                    if (result && result.va_numbers && result.va_numbers[0] && result.va_numbers[0].bank) {
+                                        bankName = result.va_numbers[0].bank;
+                                    } else if (result && result.bank) {
+                                        bankName = result.bank;
+                                    }
+                                    window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(orderNum) + '&transaction_status=' + encodeURIComponent(transStatus) + '&payment_type=' + encodeURIComponent(payType) + '&bank=' + encodeURIComponent(bankName);
                                 },
                                 onPending: function (result) {
                                     const orderNum = (result && result.order_id) ? result.order_id : nomorPesanan;
-                                    window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(orderNum) + '&transaction_status=pending';
+                                    let payType = (result && result.payment_type) ? result.payment_type : '';
+                                    let bankName = '';
+                                    if (result && result.va_numbers && result.va_numbers[0] && result.va_numbers[0].bank) {
+                                        bankName = result.va_numbers[0].bank;
+                                    } else if (result && result.bank) {
+                                        bankName = result.bank;
+                                    }
+                                    window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(orderNum) + '&transaction_status=pending&payment_type=' + encodeURIComponent(payType) + '&bank=' + encodeURIComponent(bankName);
                                 },
                                 onError: function () {
                                     window.location.href = 'pesanan_sukses.php?id=' + pesananId + '&order_id=' + encodeURIComponent(nomorPesanan) + '&transaction_status=failure';
@@ -738,6 +758,14 @@
                     });
                 });
             }
+
+            <?php if (empty($selected_alamat)): ?>
+            const modalAutoTambah = document.getElementById('modalTambahAlamatCheckout');
+            if (modalAutoTambah) {
+                const instModal = new bootstrap.Modal(modalAutoTambah);
+                instModal.show();
+            }
+            <?php endif; ?>
         });
     </script>
 </body>

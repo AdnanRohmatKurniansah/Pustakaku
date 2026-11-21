@@ -42,7 +42,33 @@
         }
     }
 
-    function midtrans_check_transaction_status($order_id) {
+    function format_nama_metode_pembayaran($payment_type, $bank = '', $va_numbers = []) {
+        $pt = strtolower(trim((string)$payment_type));
+        $b = strtolower(trim((string)$bank));
+        if (empty($b) && !empty($va_numbers) && is_array($va_numbers) && !empty($va_numbers[0]['bank'])) {
+            $b = strtolower(trim((string)$va_numbers[0]['bank']));
+        }
+        if ($pt === 'qris') return 'QRIS';
+        if ($pt === 'gopay') return 'GoPay';
+        if ($pt === 'shopeepay') return 'ShopeePay';
+        if ($pt === 'bank_transfer') {
+            if ($b === 'bca') return 'Transfer Bank BCA';
+            if ($b === 'bni') return 'Transfer Bank BNI';
+            if ($b === 'bri') return 'Transfer Bank BRI';
+            if ($b === 'permata') return 'Transfer Bank Permata';
+            if (!empty($b)) return 'Transfer Bank ' . strtoupper($b);
+            return 'Transfer Bank';
+        }
+        if ($pt === 'echannel') return 'Transfer Bank Mandiri';
+        if ($pt === 'cstore') return 'Minimarket (Indomaret / Alfamart)';
+        if ($pt === 'credit_card') return 'Kartu Kredit / Debit';
+        if (!empty($pt)) {
+            return ucwords(str_replace('_', ' ', $pt));
+        }
+        return 'Transfer Bank / QRIS';
+    }
+
+    function midtrans_get_transaction_data($order_id) {
         $server_key = $_ENV['MIDTRANS_SERVER_KEY'] ?? '';
         $is_production = filter_var($_ENV['MIDTRANS_IS_PRODUCTION'] ?? false, FILTER_VALIDATE_BOOLEAN);
 
@@ -70,10 +96,14 @@
         curl_close($ch);
 
         if ($http_code === 200 && $response) {
-            $data = json_decode($response, true);
-            return $data['transaction_status'] ?? null;
+            return json_decode($response, true);
         }
 
         return null;
+    }
+
+    function midtrans_check_transaction_status($order_id) {
+        $data = midtrans_get_transaction_data($order_id);
+        return $data['transaction_status'] ?? null;
     }
 ?>

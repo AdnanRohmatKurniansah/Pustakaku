@@ -996,15 +996,15 @@ body {
 }
  
 .cart-empty-icon {
-    width: 84px;
-    height: 84px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     background: #eaf6ef;
     color: #198754;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2.4rem;
+    font-size: 24px;
 }
  
 .cart-toast-wrap {

@@ -38,15 +38,34 @@
         exit;
     }
 
+    $pay_type_param = $_GET['payment_type'] ?? '';
+    $bank_param = $_GET['bank'] ?? '';
+    if (!empty($pay_type_param)) {
+        $clean_metode = format_nama_metode_pembayaran($pay_type_param, $bank_param);
+        $clean_metode_esc = mysqli_real_escape_string($conn, $clean_metode);
+        mysqli_query($conn, "UPDATE pesanan SET metode_pembayaran = '$clean_metode_esc', updated_at = NOW() WHERE id = '$pesanan_id'");
+        $pesanan['metode_pembayaran'] = $clean_metode;
+    }
+
     $status_param = strtolower($_GET['transaction_status'] ?? '');
     if (in_array($status_param, ['settlement', 'capture', 'success'], true) && $pesanan['status_pesanan'] === 'menunggu_pembayaran') {
         mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'diproses', updated_at = NOW() WHERE id = '$pesanan_id'");
         $pesanan['status_pesanan'] = 'diproses';
     } elseif ($pesanan['status_pesanan'] === 'menunggu_pembayaran') {
-        $api_status = midtrans_check_transaction_status($pesanan['nomor_pesanan']);
-        if (in_array(strtolower($api_status ?? ''), ['settlement', 'capture', 'success'], true)) {
-            mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'diproses', updated_at = NOW() WHERE id = '$pesanan_id'");
-            $pesanan['status_pesanan'] = 'diproses';
+        $api_data = midtrans_get_transaction_data($pesanan['nomor_pesanan']);
+        if ($api_data && is_array($api_data)) {
+            $api_status = strtolower($api_data['transaction_status'] ?? '');
+            $api_metode = format_nama_metode_pembayaran($api_data['payment_type'] ?? '', $api_data['bank'] ?? '', $api_data['va_numbers'] ?? []);
+            $api_metode_esc = mysqli_real_escape_string($conn, $api_metode);
+
+            if (in_array($api_status, ['settlement', 'capture', 'success'], true)) {
+                mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'diproses', metode_pembayaran = '$api_metode_esc', updated_at = NOW() WHERE id = '$pesanan_id'");
+                $pesanan['status_pesanan'] = 'diproses';
+                $pesanan['metode_pembayaran'] = $api_metode;
+            } elseif (!empty($api_data['payment_type'])) {
+                mysqli_query($conn, "UPDATE pesanan SET metode_pembayaran = '$api_metode_esc', updated_at = NOW() WHERE id = '$pesanan_id'");
+                $pesanan['metode_pembayaran'] = $api_metode;
+            }
         }
     }
 

@@ -394,7 +394,6 @@ CREATE TABLE `users` (
   `password` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `role` enum('admin','pelanggan') COLLATE utf8mb4_general_ci NOT NULL DEFAULT 'pelanggan',
   `no_telepon` varchar(20) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `alamat_lengkap` text COLLATE utf8mb4_general_ci,
   `foto_profil` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `reset_token` varchar(255) COLLATE utf8mb4_general_ci DEFAULT NULL,
   `reset_token_expires` datetime DEFAULT NULL,

@@ -85,10 +85,9 @@
 
         $nama_lengkap = mysqli_real_escape_string($conn, $nama_lengkap);
         $no_telepon = mysqli_real_escape_string($conn, $no_telepon);
-        $alamat_lengkap = mysqli_real_escape_string($conn, $alamat_lengkap);
         $profile_nama_esc = mysqli_real_escape_string($conn, $profile_nama);
 
-        $query = mysqli_query($conn, "UPDATE users SET nama_lengkap = '$nama_lengkap', no_telepon = '$no_telepon', alamat_lengkap = '$alamat_lengkap', foto_profil = '$profile_nama_esc', updated_at = NOW() WHERE id = '$userId'");
+        $query = mysqli_query($conn, "UPDATE users SET nama_lengkap = '$nama_lengkap', no_telepon = '$no_telepon', foto_profil = '$profile_nama_esc', updated_at = NOW() WHERE id = '$userId'");
 
         if ($query) {
             $_SESSION['nama_lengkap'] = $nama_lengkap;

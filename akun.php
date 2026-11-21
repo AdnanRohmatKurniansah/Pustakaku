@@ -17,7 +17,7 @@
     $user_id = (int) $_SESSION['user_id'];
 
     $user = null;
-    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, role, no_telepon, alamat_lengkap, foto_profil, provider, created_at FROM users WHERE id = '$user_id' LIMIT 1");
+    $q_user = mysqli_query($conn, "SELECT id, nama_lengkap, email, role, no_telepon, foto_profil, provider, created_at FROM users WHERE id = '$user_id' LIMIT 1");
     $user = $q_user ? mysqli_fetch_assoc($q_user) : null;
 
     if (!$user) {
@@ -33,14 +33,23 @@
     $initials = strtoupper(substr($user['nama_lengkap'] ?? 'U', 0, 1));
     $joined_date = !empty($user['created_at']) ? date('d M Y', strtotime($user['created_at'])) : '-';
 
-    $q_my_orders = mysqli_query($conn, "SELECT p.*, (SELECT COUNT(*) FROM detail_pesanan dp WHERE dp.pesanan_id = p.id) AS total_item FROM pesanan p WHERE p.user_id = '$user_id' ORDER BY p.created_at DESC");
+    $per_page_orders = 5;
+    $page_orders = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+    $q_count_orders = mysqli_query($conn, "SELECT COUNT(*) AS total FROM pesanan WHERE user_id = '$user_id'");
+    $total_my_orders = ($q_count_orders && $r_cnt = mysqli_fetch_assoc($q_count_orders)) ? (int)$r_cnt['total'] : 0;
+    $total_pages_orders = max(1, (int) ceil($total_my_orders / $per_page_orders));
+    if ($page_orders > $total_pages_orders) {
+        $page_orders = $total_pages_orders;
+    }
+    $offset_orders = ($page_orders - 1) * $per_page_orders;
+
+    $q_my_orders = mysqli_query($conn, "SELECT p.*, (SELECT COUNT(*) FROM detail_pesanan dp WHERE dp.pesanan_id = p.id) AS total_item FROM pesanan p WHERE p.user_id = '$user_id' ORDER BY p.created_at DESC LIMIT $per_page_orders OFFSET $offset_orders");
     $orders = [];
     if ($q_my_orders) {
         while ($r_ord = mysqli_fetch_assoc($q_my_orders)) {
             $orders[] = $r_ord;
         }
     }
-    $total_my_orders = count($orders);
 
     $q_alamat = mysqli_query($conn, "SELECT * FROM user_alamat WHERE user_id = '$user_id' ORDER BY is_primary DESC, id ASC");
     $alamat_list = [];
@@ -83,18 +92,19 @@
     $total_pesanan_selesai   = 0;
     $total_pesanan_proses    = 0;
     $total_pesanan_menunggu  = 0;
-    foreach ($orders as $ord) {
-        if ($ord['status_pesanan'] === 'selesai') {
-            $total_pesanan_selesai++;
-        } elseif (in_array($ord['status_pesanan'], ['diproses', 'dikirim'], true)) {
-            $total_pesanan_proses++;
-        } elseif (in_array($ord['status_pesanan'], ['menunggu_pembayaran', 'menunggu_verifikasi'], true)) {
-            $total_pesanan_menunggu++;
-        }
+    $q_st_cnt = mysqli_query($conn, "SELECT 
+        SUM(CASE WHEN status_pesanan = 'selesai' THEN 1 ELSE 0 END) AS selesai,
+        SUM(CASE WHEN status_pesanan IN ('diproses', 'dikirim') THEN 1 ELSE 0 END) AS proses,
+        SUM(CASE WHEN status_pesanan IN ('menunggu_pembayaran', 'menunggu_verifikasi') THEN 1 ELSE 0 END) AS menunggu
+        FROM pesanan WHERE user_id = '$user_id'");
+    if ($q_st_cnt && $r_st = mysqli_fetch_assoc($q_st_cnt)) {
+        $total_pesanan_selesai = (int)($r_st['selesai'] ?? 0);
+        $total_pesanan_proses = (int)($r_st['proses'] ?? 0);
+        $total_pesanan_menunggu = (int)($r_st['menunggu'] ?? 0);
     }
 
     $provinces = rajaongkir_get_provinces();
-    $active_tab = $_GET['tab'] ?? 'pesanan';
+    $active_tab = $_GET['tab'] ?? (isset($_GET['page']) ? 'pesanan' : 'pesanan');
     $valid_tabs = ['biodata', 'alamat', 'pembayaran', 'pesanan', 'manajemen'];
     if (!in_array($active_tab, $valid_tabs, true)) {
         $active_tab = 'pesanan';
@@ -172,12 +182,6 @@
                                         <span class="stat-label">Alamat</span>
                                     </a>
                                 </div>
-                                <div class="col-6">
-                                    <a href="keranjang.php" class="account-stat">
-                                        <span class="stat-value"><?= $cart_qty; ?></span>
-                                        <span class="stat-label">Keranjang</span>
-                                    </a>
-                                </div>
                             </div>
                         </div>
                         <div class="p-3 border-bottom">
@@ -188,7 +192,7 @@
                                 </span>
                             </div>
                             <div class="account-info-row">
-                                <span><i class="bi bi-book me-2 text-success"></i>Buku Dibeli</span>
+                                <span><i class="bi bi-book me-2 text-success"></i>Barang Dibeli</span>
                                 <span><?= $total_item_dibeli; ?> eksemplar</span>
                             </div>
                             <div class="account-info-row">
@@ -306,6 +310,30 @@
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
+
+                                <?php if ($total_pages_orders > 1): ?>
+                                    <nav aria-label="Navigasi Halaman Pesanan" class="mt-4">
+                                        <ul class="pagination pagination-sm justify-content-center gap-1 mb-0">
+                                            <li class="page-item <?= ($page_orders <= 1) ? 'disabled' : ''; ?>">
+                                                <a class="page-link rounded-3 px-3 py-2 text-decoration-none <?= ($page_orders <= 1) ? 'text-muted' : 'text-dark'; ?>" href="akun.php?tab=pesanan&page=<?= max(1, $page_orders - 1); ?>">
+                                                    <i class="bi bi-chevron-left me-1"></i>Sebelumnya
+                                                </a>
+                                            </li>
+                                            <?php for ($p = 1; $p <= $total_pages_orders; $p++): ?>
+                                                <li class="page-item <?= ($p === $page_orders) ? 'active' : ''; ?>">
+                                                    <a class="page-link rounded-3 px-3 py-2 fw-semibold text-decoration-none <?= ($p === $page_orders) ? 'bg-success border-success text-white' : 'text-dark'; ?>" href="akun.php?tab=pesanan&page=<?= $p; ?>">
+                                                        <?= $p; ?>
+                                                    </a>
+                                                </li>
+                                            <?php endfor; ?>
+                                            <li class="page-item <?= ($page_orders >= $total_pages_orders) ? 'disabled' : ''; ?>">
+                                                <a class="page-link rounded-3 px-3 py-2 text-decoration-none <?= ($page_orders >= $total_pages_orders) ? 'text-muted' : 'text-dark'; ?>" href="akun.php?tab=pesanan&page=<?= min($total_pages_orders, $page_orders + 1); ?>">
+                                                    Selanjutnya<i class="bi bi-chevron-right ms-1"></i>
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </nav>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -340,7 +368,6 @@
                                         <div class="border rounded-4 p-3 <?= ($al['is_primary'] == 1) ? 'border-success bg-success-subtle bg-opacity-10' : 'bg-white'; ?>">
                                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                                                 <div class="d-flex align-items-center gap-2">
-                                                    <span class="badge <?= ($al['is_primary'] == 1) ? 'bg-success' : 'bg-secondary'; ?> rounded-pill px-3 py-1 fw-bold"><?= htmlspecialchars($al['label_alamat']); ?></span>
                                                     <?php if ($al['is_primary'] == 1): ?>
                                                         <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small"><i class="bi bi-check-circle-fill me-1"></i>Alamat Utama</span>
                                                     <?php endif; ?>
@@ -388,14 +415,6 @@
                                 <div class="min-w-0">
                                     <div class="fw-bold text-dark text-truncate"><?= htmlspecialchars($user['nama_lengkap']); ?></div>
                                     <div class="text-muted small text-truncate"><?= htmlspecialchars($user['email']); ?></div>
-                                    <span class="badge <?= ($user['role'] === 'admin') ? 'bg-danger-subtle text-danger' : 'bg-success-subtle text-success'; ?> rounded-pill px-2 py-1 mt-1" style="font-size: 10px;">
-                                        <?= ($user['role'] === 'admin') ? 'Administrator' : 'Pelanggan'; ?>
-                                    </span>
-                                    <?php if ($is_google_user): ?>
-                                        <span class="badge bg-light text-secondary border rounded-pill px-2 py-1 mt-1" style="font-size: 10px;">
-                                            <i class="bi bi-google text-danger me-1"></i>Google
-                                        </span>
-                                    <?php endif; ?>
                                 </div>
                             </div>
 
@@ -409,13 +428,7 @@
                                 <div class="col-12 col-md-6">
                                     <div class="biodata-item h-100">
                                         <div class="biodata-label">Alamat Email</div>
-                                        <div class="biodata-value"><?= htmlspecialchars($user['email']); ?>
-                                            <?php if ($is_google_user): ?>
-                                                <span class="badge bg-danger-subtle text-danger rounded-pill ms-1" style="font-size: 9px;"><i class="bi bi-google me-1"></i>Google</span>
-                                            <?php else: ?>
-                                                <span class="badge bg-success-subtle text-success rounded-pill ms-1" style="font-size: 9px;"><i class="bi bi-patch-check-fill me-1"></i>Terverifikasi</span>
-                                            <?php endif; ?>
-                                        </div>
+                                        <div class="biodata-value"><?= htmlspecialchars($user['email']); ?></div>
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-6">
@@ -432,37 +445,15 @@
                                 </div>
                                 <div class="col-12">
                                     <div class="biodata-item h-100">
-                                        <div class="biodata-label">Alamat Lengkap</div>
+                                        <div class="biodata-label">Alamat Utama Pengiriman</div>
                                         <div class="biodata-value fw-normal">
-                                            <?= !empty($user['alamat_lengkap']) ? nl2br(htmlspecialchars($user['alamat_lengkap'])) : '<span class="text-muted fst-italic">Belum diisi</span>'; ?>
+                                            <?php if ($alamat_utama): ?>
+                                                <strong><?= htmlspecialchars($alamat_utama['label_alamat']); ?></strong> &bull; <?= htmlspecialchars($alamat_utama['nama_penerima']); ?> (<?= htmlspecialchars($alamat_utama['no_telepon']); ?>)<br>
+                                                <?= htmlspecialchars($alamat_utama['alamat_lengkap']); ?>, <?= !empty($alamat_utama['kecamatan']) ? 'Kec. ' . htmlspecialchars($alamat_utama['kecamatan']) . ', ' : ''; ?><?= htmlspecialchars($alamat_utama['kota_nama']); ?>, <?= htmlspecialchars($alamat_utama['provinsi_nama']); ?> <?= htmlspecialchars($alamat_utama['kode_pos']); ?>
+                                            <?php else: ?>
+                                                <span class="text-muted fst-italic">Belum ada alamat pengiriman. <a href="akun.php?tab=alamat" class="text-success text-decoration-none fw-semibold">Kelola Alamat</a></span>
+                                            <?php endif; ?>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row g-2 mt-4 pt-3 border-top">
-                                <div class="col-6 col-md-3">
-                                    <div class="account-stat">
-                                        <span class="stat-value"><?= $total_my_orders; ?></span>
-                                        <span class="stat-label">Total Pesanan</span>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="account-stat">
-                                        <span class="stat-value"><?= $total_ulasan; ?></span>
-                                        <span class="stat-label">Ulasan</span>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="account-stat">
-                                        <span class="stat-value"><?= $total_item_dibeli; ?></span>
-                                        <span class="stat-label">Buku Dibeli</span>
-                                    </div>
-                                </div>
-                                <div class="col-6 col-md-3">
-                                    <div class="account-stat">
-                                        <span class="stat-value" style="font-size: 0.72rem; padding-top: 3px;"><?= formatRupiah($total_belanja); ?></span>
-                                        <span class="stat-label">Total Belanja</span>
                                     </div>
                                 </div>
                             </div>
@@ -476,14 +467,11 @@
                                     <h5 class="fw-bold text-dark mb-1"><i class="bi bi-shield-lock-fill text-success me-2"></i>Keamanan Akun</h5>
                                     <p class="text-muted small mb-0">Perbarui kata sandi secara berkala untuk menjaga keamanan akun Anda</p>
                                 </div>
-                                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 fw-semibold"><i class="bi bi-lock-fill me-1"></i>Aktif</span>
                             </div>
 
                             <?php if ($is_google_user): ?>
                                 <div class="alert alert-light border rounded-4 p-4 d-flex align-items-start gap-3 bg-light">
-                                    <div class="rounded-circle bg-white p-2 text-danger shadow-sm flex-shrink-0 d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">
-                                        <i class="bi bi-google fs-4"></i>
-                                    </div>
+                                    <img width="20px" src="./assets/images/google.svg" alt="Google" class="img-fluid">
                                     <div>
                                         <h6 class="fw-bold text-dark mb-1">Masuk dengan Akun Google</h6>
                                         <p class="text-muted small mb-0">Akun Anda terdaftar dan terautentikasi melalui Google. Kata sandi dikelola langsung oleh akun Google Anda, sehingga fitur ganti kata sandi dinonaktifkan di PustakaKu.</p>
