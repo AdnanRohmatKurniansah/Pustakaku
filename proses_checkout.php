@@ -204,12 +204,12 @@
     $snap_token_val = !empty($snap_token) ? "'" . mysqli_real_escape_string($conn, $snap_token) . "'" : "NULL";
 
     $q_pesanan = "INSERT INTO pesanan (
-        nomor_pesanan, user_id, alamat_id, voucher_id, total_buku,
+        nomor_pesanan, user_id, alamat_id, total_buku,
         potongan_diskon, ongkos_kirim, kurir_service, total_bayar,
         status_pesanan, alamat_pengiriman, metode_pembayaran,
         snap_token, catatan_pembeli, created_at, updated_at
     ) VALUES (
-        '$nomor_pesanan_esc', '$user_id', $alamat_id_val, NULL, '$total_buku',
+        '$nomor_pesanan_esc', '$user_id', $alamat_id_val, '$total_buku',
         '$potongan_diskon', '$ongkos_kirim', '$kurir_esc', '$total_bayar',
         '$status_pesanan', '$alamat_esc', '$metode_esc',
         $snap_token_val, '$catatan_esc', NOW(), NOW()

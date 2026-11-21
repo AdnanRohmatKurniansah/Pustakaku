@@ -55,13 +55,6 @@
                 <span>Pesanan Masuk</span>
             </a>
         </li>
-
-        <li class="nav-item">
-            <a class="nav-link" href="admin/laporan/index.php" data-menu="laporan">
-                <i class="bi bi-file-earmark-bar-graph-fill"></i>
-                <span>Laporan Penjualan</span>
-            </a>
-        </li>
     </ul>
 </div>
 
@@ -85,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
             restok: '/admin/restok/index.php',
             supplier: '/admin/supplier/index.php',
             pesanan: '/admin/pesanan/index.php',
-            laporan: '/admin/laporan/index.php'
+            laporan: '/admin/index.php#laporan'
         };
 
         if (menuPaths[menu]) {
@@ -95,6 +88,12 @@ document.addEventListener('DOMContentLoaded', function () {
         if (menu === 'dashboard') {
             if (currentPath === projectRoot + '/admin/' ||
                 currentPath === projectRoot + '/admin/index.php') {
+                if (window.location.hash !== '#laporan') {
+                    link.classList.add('active');
+                }
+            }
+        } else if (menu === 'laporan') {
+            if ((currentPath === projectRoot + '/admin/' || currentPath === projectRoot + '/admin/index.php') && window.location.hash === '#laporan') {
                 link.classList.add('active');
             }
         } else if (currentPath.includes('/admin/' + menu)) {
