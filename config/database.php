@@ -152,7 +152,6 @@
                     $handler = new PustakakuSessionHandler($conn);
                     session_set_save_handler($handler, true);
                 }
-                session_start();
             }
         }
     }
