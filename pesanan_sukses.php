@@ -95,7 +95,7 @@
             <ol class="breadcrumb small">
                 <li class="breadcrumb-item"><a href="index.php" class="text-success text-decoration-none">Beranda</a></li>
                 <li class="breadcrumb-item"><a href="akun.php?tab=pesanan" class="text-success text-decoration-none">Akun Saya</a></li>
-                <li class="breadcrumb-item active" aria-current="page">Pesanan Sukses</li>
+                <li class="breadcrumb-item active" aria-current="page">Riwayat Pesanan</li>
             </ol>
         </nav>
 

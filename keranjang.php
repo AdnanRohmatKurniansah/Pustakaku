@@ -50,7 +50,7 @@
         <section class="mb-3 mb-lg-4">
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb small mb-2">
-                    <li class="breadcrumb-item"><a href="index.php" class="text-success text-decoration-none">Beranda</a></li>
+                    <li class="breadcrumb-item active"><a href="index.php" class="text-success text-decoration-none">Beranda</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Keranjang Belanja</li>
                 </ol>
             </nav>
