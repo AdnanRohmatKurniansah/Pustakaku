@@ -123,13 +123,11 @@
     <?php include(__DIR__ . '/layouts/navbar.php'); ?>
 
     <main class="container my-3 my-md-4">
-        <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 mb-4 pb-2">
-            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-2 fw-semibold"><i class="bi bi-cart-check me-1"></i>1. Keranjang</span>
-            <i class="bi bi-chevron-right text-muted small"></i>
-            <span class="badge bg-success text-white rounded-pill px-3 py-2 fw-bold shadow-sm"><i class="bi bi-credit-card me-1"></i>2. Pengiriman & Pembayaran</span>
-            <i class="bi bi-chevron-right text-muted small"></i>
-            <span class="badge bg-white text-muted border rounded-pill px-3 py-2"><i class="bi bi-check2-circle me-1"></i>3. Pesanan Selesai</span>
-        </div>
+        <ol class="breadcrumb small mb-3">
+                    <li class="breadcrumb-item active"><a href="index.php" class="text-success text-decoration-none">Beranda</a></li>
+                    <li class="breadcrumb-item"><a href="keranjang.php" class="text-success text-decoration-none">Keranjang Belanja</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Keranjang Belanja</li>
+        </ol>
 
         <?php if (!empty($_SESSION['error'])): ?>
             <div class="alert alert-danger alert-dismissible fade show rounded-4 shadow-sm mb-4" role="alert">
@@ -319,8 +317,7 @@
                             <span class="fw-bold text-success fs-4" id="labelTotalBayar"><?= formatRupiah($total_bayar); ?></span>
                         </div>
 
-                        <button type="submit" class="btn btn-success w-100 rounded-pill py-3 fw-bold fs-6 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnSubmitCheckout">
-                            <i class="bi bi-shield-lock-fill fs-5"></i>
+                        <button type="submit" class="btn btn-success w-100 rounded-pill py-2 fw-bold fs-6 shadow-sm d-flex align-items-center justify-content-center gap-2" id="btnSubmitCheckout">
                             <span>Bayar Sekarang</span>
                         </button>
 
