@@ -2,7 +2,9 @@
     require_once __DIR__ . '/../../config/database.php';
     require_once __DIR__ . '/../../services/cloudinary_service.php';
 
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         header("Location: ../../auth/login.php");
@@ -65,11 +67,34 @@
                 </div>
 
                 <div class="card p-4 shadow-sm border-0 rounded-3 mb-4">
-                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-pencil-square me-2 text-success"></i>Informasi Buku</h5>
-                    <form action="proses_edit.php" method="POST" enctype="multipart/form-data">
+                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-pencil-square me-2 text-success"></i>Form 1: Informasi Buku & Foto Utama</h5>
+                    <form action="proses_edit.php?aksi=update_buku" method="POST" enctype="multipart/form-data">
                         <input type="hidden" name="id" value="<?= $buku['id']; ?>">
 
                         <div class="row g-3">
+                            <div class="col-12 col-md-5">
+                                <label class="form-label small fw-semibold text-secondary d-block">Foto Sampul Utama Saat Ini</label>
+                                <?php 
+                                    $prim_img = resolveImageUrl($buku['gambar'] ?? '', 'buku');
+                                    if (strpos($prim_img, 'assets/') === 0) {
+                                        $prim_img = '../../' . $prim_img;
+                                    }
+                                ?>
+                                <div class="d-flex align-items-center gap-3 p-2 bg-light border rounded-3">
+                                    <img src="<?= htmlspecialchars($prim_img); ?>" alt="Sampul Utama" class="rounded-2 border object-fit-cover shadow-sm" style="width: 60px; height: 80px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
+                                    <div>
+                                        <span class="badge bg-success mb-1"><i class="bi bi-star-fill me-1"></i>Foto Utama (Tabel Buku)</span>
+                                        <div class="text-muted small" style="font-size: 11px;">Tampil di katalog, etalase & pencarian</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 col-md-7">
+                                <label for="gambar_utama" class="form-label small fw-semibold text-secondary">Ganti Foto Sampul Utama (Opsional)</label>
+                                <input type="file" class="form-control" id="gambar_utama" name="gambar_utama" accept="image/*">
+                                <div class="form-text small">Pilih file baru jika ingin mengganti foto utama buku ini. Biarkan kosong jika tidak diubah.</div>
+                            </div>
+
                             <div class="col-12 col-md-8">
                                 <label for="judul" class="form-label small fw-semibold text-secondary">Judul Buku / Nama Produk <span class="text-danger">*</span></label>
                                 <input type="text" class="form-control" id="judul" name="judul" value="<?= htmlspecialchars($buku['judul']); ?>" required autofocus>
@@ -129,57 +154,103 @@
                                 <label for="deskripsi" class="form-label small fw-semibold text-secondary">Sinopsis / Deskripsi Buku <span class="text-danger">*</span></label>
                                 <textarea class="form-control" id="deskripsi" name="deskripsi" rows="4" required><?= htmlspecialchars($buku['deskripsi'] ?? ''); ?></textarea>
                             </div>
-
-                            <div class="col-12">
-                                <label for="gambar_baru" class="form-label small fw-semibold text-secondary">Tambah Foto Galeri Baru</label>
-                                <input type="file" class="form-control" id="gambar_baru" name="gambar_baru[]" multiple accept="image/*">
-                                <div class="form-text small">Pilih satu atau lebih file baru untuk ditambahkan ke galeri produk ini.</div>
-                            </div>
                         </div>
 
                         <div class="d-flex gap-2 mt-4 pt-3 border-top">
                             <button type="submit" class="btn btn-success d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-save"></i>
-                                <span>Simpan Perubahan</span>
+                                <span>Simpan Perubahan Buku & Foto Utama</span>
                             </button>
-                            <a href="index.php" class="btn btn-secondary">Batal</a>
+                            <a href="index.php" class="btn btn-secondary">Kembali ke Daftar</a>
                         </div>
                     </form>
                 </div>
 
                 <div class="card p-4 shadow-sm border-0 rounded-3">
-                    <h5 class="fw-bold text-dark mb-3"><i class="bi bi-images me-2 text-primary"></i>Galeri Foto Produk Saat Ini</h5>
-                    <?php if (empty($galeri)): ?>
-                        <p class="text-muted small">Belum ada foto galeri terdaftar untuk buku ini.</p>
-                    <?php else: ?>
-                        <div class="row g-3">
-                            <?php foreach ($galeri as $item): 
-                                $img_url = resolveImageUrl($item['url_gambar'], 'buku');
-                                if (strpos($img_url, 'http://') !== 0 && strpos($img_url, 'https://') !== 0) {
-                                    $img_url = '../../' . ltrim($img_url, '/');
-                                }
-                            ?>
-                                <div class="col-6 col-sm-4 col-md-3 col-lg-2">
-                                    <div class="card h-100 border text-center p-2 rounded-3 position-relative">
-                                        <?php if ($item['is_primary'] == 1): ?>
-                                            <span class="badge bg-success position-absolute top-0 start-50 translate-middle mt-2 shadow-sm">Utama (Primary)</span>
-                                        <?php endif; ?>
-                                        <div class="ratio ratio-1x1 mb-2 mt-2">
-                                            <img src="<?= htmlspecialchars($img_url); ?>" alt="Galeri" class="img-fluid rounded-2 object-fit-cover border" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
-                                        </div>
-                                        <div class="d-flex flex-column gap-1">
-                                            <?php if ($item['is_primary'] == 0): ?>
-                                                <a href="proses_edit.php?action=set_primary&buku_id=<?= $buku['id']; ?>&gambar_id=<?= $item['id']; ?>" class="btn btn-xs btn-outline-success py-1" style="font-size:0.75rem;">Jadikan Utama</a>
-                                                <a href="proses_edit.php?action=delete_gambar&buku_id=<?= $buku['id']; ?>&gambar_id=<?= $item['id']; ?>" class="btn btn-xs btn-outline-danger py-1" style="font-size:0.75rem;" onclick="return confirm('Hapus foto ini dari galeri?');">Hapus</a>
-                                            <?php else: ?>
-                                                <span class="small text-muted py-1" style="font-size:0.75rem;">Foto Sampul Utama</span>
-                                            <?php endif; ?>
-                                        </div>
-                                    </div>
-                                </div>
-                            <?php endforeach; ?>
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 mb-3 pb-3 border-bottom">
+                        <div>
+                            <h5 class="fw-bold text-dark mb-1"><i class="bi bi-images me-2 text-primary"></i>Form 2: Kelola Galeri Foto Tambahan (Buku Gambar)</h5>
+                            <p class="text-muted small mb-0">Daftar foto tambahan untuk galeri buku ini yang tersimpan pada tabel <code>buku_gambar</code>.</p>
                         </div>
-                    <?php endif; ?>
+                    </div>
+
+                    <div class="table-responsive rounded-2 mb-4 border">
+                        <table class="table align-middle mb-0">
+                            <thead class="table-light">
+                                <tr class="small text-muted">
+                                    <th style="width: 50px;">No</th>
+                                    <th style="width: 90px;">Foto</th>
+                                    <th>Status Gambar</th>
+                                    <th>Tanggal Dibuat</th>
+                                    <th style="width: 220px;" class="text-center">Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php 
+                                    $additional_items = array_filter($galeri, fn($g) => (int)$g['is_primary'] === 0);
+                                ?>
+                                <?php if (empty($additional_items)): ?>
+                                    <tr>
+                                        <td colspan="5" class="text-center py-4 text-muted small">
+                                            <i class="bi bi-images fs-2 d-block mb-1 text-secondary"></i>
+                                            Belum ada foto tambahan untuk buku ini. Silakan unggah foto tambahan melalui formulir di bawah.
+                                        </td>
+                                    </tr>
+                                <?php else: ?>
+                                    <?php $no = 1; foreach ($additional_items as $item): 
+                                        $img_url = resolveImageUrl($item['url_gambar'], 'buku');
+                                        if (strpos($img_url, 'assets/') === 0) {
+                                            $img_url = '../../' . ltrim($img_url, '/');
+                                        }
+                                    ?>
+                                        <tr>
+                                            <td class="fw-semibold text-muted"><?= $no++; ?></td>
+                                            <td>
+                                                <img src="<?= htmlspecialchars($img_url); ?>" alt="Foto Tambahan" class="rounded-2 border object-fit-cover shadow-sm" style="width: 54px; height: 72px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">Foto Tambahan (Galeri)</span>
+                                            </td>
+                                            <td class="small text-muted">
+                                                <?= date('d M Y, H:i', strtotime($item['created_at'])); ?> WIB
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="d-inline-flex gap-2">
+                                                    <a href="proses_edit.php?action=set_primary&buku_id=<?= $buku['id']; ?>&gambar_id=<?= $item['id']; ?>" class="btn btn-sm btn-outline-success d-inline-flex align-items-center gap-1" title="Jadikan Sampul Utama">
+                                                        <i class="bi bi-star"></i>
+                                                        <span>Jadikan Utama</span>
+                                                    </a>
+                                                    <a href="proses_edit.php?action=delete_gambar&buku_id=<?= $buku['id']; ?>&gambar_id=<?= $item['id']; ?>" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1" onclick="return confirm('Apakah Anda yakin ingin menghapus foto tambahan ini?');" title="Hapus Foto">
+                                                        <i class="bi bi-trash"></i>
+                                                        <span>Hapus</span>
+                                                    </a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="p-3 bg-light border rounded-3">
+                        <h6 class="fw-bold text-dark mb-2"><i class="bi bi-cloud-arrow-up text-success me-2"></i>Tambah Foto Tambahan Baru</h6>
+                        <form action="proses_edit.php?aksi=tambah_gambar_tambahan" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="buku_id" value="<?= $buku['id']; ?>">
+                            <div class="row g-2 align-items-center">
+                                <div class="col-12 col-md-9">
+                                    <input type="file" class="form-control" name="gambar_tambahan[]" multiple accept="image/*" required>
+                                    <div class="form-text small">Pilih satu atau beberapa foto tambahan baru untuk ditambahkan ke galeri produk ini.</div>
+                                </div>
+                                <div class="col-12 col-md-3">
+                                    <button type="submit" class="btn btn-success w-100 d-inline-flex align-items-center justify-content-center gap-2">
+                                        <i class="bi bi-plus-circle"></i>
+                                        <span>Unggah Tambahan</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </main>
 

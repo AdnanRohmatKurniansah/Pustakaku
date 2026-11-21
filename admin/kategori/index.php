@@ -1,5 +1,6 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../services/cloudinary_service.php';
 
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
@@ -75,7 +76,13 @@
                                         <tr>
                                             <td class="fw-semibold text-muted"><?= $no++; ?></td>
                                             <td>
-                                                <img src="<?= (!empty($row['gambar']) && file_exists('../../assets/uploads/kategori/' . $row['gambar'])) ? ('../../assets/uploads/kategori/' . htmlspecialchars($row['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($row['nama_kategori']); ?>" class="rounded-3 object-fit-cover border" style="width: 54px; height: 54px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
+                                                <?php 
+                                                    $kat_img = resolveImageUrl($row['gambar'] ?? '', 'kategori'); 
+                                                    if (strpos($kat_img, 'assets/') === 0) { 
+                                                        $kat_img = '../../' . $kat_img; 
+                                                    } 
+                                                ?>
+                                                <img src="<?= htmlspecialchars($kat_img); ?>" alt="<?= htmlspecialchars($row['nama_kategori']); ?>" class="rounded-3 object-fit-cover border" style="width: 54px; height: 54px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
                                             </td>
                                             <td>
                                                 <div class="fw-bold text-dark"><?= htmlspecialchars($row['nama_kategori']); ?></div>

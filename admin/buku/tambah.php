@@ -1,7 +1,9 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
 
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         header("Location: ../../auth/login.php");
@@ -105,10 +107,16 @@
                                 <textarea class="form-control" id="deskripsi" name="deskripsi" rows="4" placeholder="Tuliskan ringkasan cerita atau sinopsis produk..." required></textarea>
                             </div>
 
-                            <div class="col-12">
-                                <label for="gambar" class="form-label small fw-semibold text-secondary">Foto Produk / Galeri Sampul <span class="text-danger">*</span></label>
-                                <input type="file" class="form-control" id="gambar" name="gambar[]" multiple accept="image/*" required>
-                                <div class="form-text small">Pilih satu atau beberapa foto sekaligus. Foto pertama otomatis dijadikan foto utama (Primary). Mendukung JPG, PNG, WEBP (Cloudinary & Lokal).</div>
+                            <div class="col-12 col-md-6">
+                                <label for="gambar_utama" class="form-label small fw-semibold text-secondary">Foto Sampul Utama (Primary) <span class="text-danger">*</span></label>
+                                <input type="file" class="form-control" id="gambar_utama" name="gambar_utama" accept="image/*" required>
+                                <div class="form-text small">Foto utama yang tampil di katalog, etalase, dan hasil pencarian (Tabel Buku).</div>
+                            </div>
+
+                            <div class="col-12 col-md-6">
+                                <label for="gambar_tambahan" class="form-label small fw-semibold text-secondary">Foto Galeri Tambahan (Min. 1) <span class="text-danger">*</span></label>
+                                <input type="file" class="form-control" id="gambar_tambahan" name="gambar_tambahan[]" multiple accept="image/*" required>
+                                <div class="form-text small">Wajib minimal 1 foto tambahan (halaman isi, sampul belakang, dsb) untuk disimpan di Tabel Buku Gambar.</div>
                             </div>
                         </div>
 

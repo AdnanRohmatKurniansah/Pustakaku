@@ -54,6 +54,11 @@
             return $image_value;
         }
 
+        $local_path = dirname(__DIR__) . '/assets/uploads/' . $folder . '/' . $image_value;
+        if (!empty($image_value) && file_exists($local_path)) {
+            return 'assets/uploads/' . $folder . '/' . $image_value;
+        }
+
         return 'assets/images/placeholder.png';
     }
 ?>

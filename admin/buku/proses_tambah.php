@@ -2,7 +2,9 @@
     require_once __DIR__ . '/../../config/database.php';
     require_once __DIR__ . '/../../services/cloudinary_service.php';
 
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         header("Location: ../../auth/login.php");
@@ -28,9 +30,25 @@
             exit;
         }
 
-        $uploaded_images = [];
-        if (isset($_FILES['gambar'])) {
-            $files = $_FILES['gambar'];
+        if (!isset($_FILES['gambar_utama']) || $_FILES['gambar_utama']['error'] !== UPLOAD_ERR_OK) {
+            $_SESSION['error'] = "Foto sampul utama wajib diunggah.";
+            header("Location: tambah.php");
+            exit;
+        }
+
+        $upload_utama = uploadFileCloudinary($_FILES['gambar_utama'], 'buku');
+        if (!$upload_utama['ok']) {
+            $_SESSION['error'] = "Gagal mengunggah foto utama: " . ($upload_utama['message'] ?? '');
+            header("Location: tambah.php");
+            exit;
+        }
+
+        $primary_image = $upload_utama['url'];
+        $primary_public_id = $upload_utama['public_id'] ?? null;
+
+        $uploaded_tambahan = [];
+        if (isset($_FILES['gambar_tambahan'])) {
+            $files = $_FILES['gambar_tambahan'];
             $count = is_array($files['name']) ? count($files['name']) : 1;
 
             for ($i = 0; $i < $count; $i++) {
@@ -46,22 +64,20 @@
                     ];
                     $upload_res = uploadFileCloudinary($single_file, 'buku');
                     if ($upload_res['ok']) {
-                        $uploaded_images[] = [
+                        $uploaded_tambahan[] = [
                             'url' => $upload_res['url'],
-                            'public_id' => $upload_res['public_id']
+                            'public_id' => $upload_res['public_id'] ?? null
                         ];
                     }
                 }
             }
         }
 
-        if (empty($uploaded_images)) {
-            $_SESSION['error'] = "Minimal satu foto sampul produk wajib diunggah.";
+        if (empty($uploaded_tambahan)) {
+            $_SESSION['error'] = "Minimal wajib mengunggah 1 foto tambahan untuk galeri buku.";
             header("Location: tambah.php");
             exit;
         }
-
-        $primary_image = $uploaded_images[0]['url'];
 
         $judul = mysqli_real_escape_string($conn, $judul);
         $penulis = mysqli_real_escape_string($conn, $penulis);
@@ -76,14 +92,17 @@
         if ($insert) {
             $buku_id = mysqli_insert_id($conn);
 
-            foreach ($uploaded_images as $index => $img) {
+            $pid_primary_esc = !empty($primary_public_id) ? "'" . mysqli_real_escape_string($conn, $primary_public_id) . "'" : "NULL";
+            mysqli_query($conn, "INSERT INTO buku_gambar (buku_id, url_gambar, public_id, is_primary, urutan) VALUES ('$buku_id', '$primary_image_esc', $pid_primary_esc, 1, 0)");
+
+            foreach ($uploaded_tambahan as $index => $img) {
                 $url_esc = mysqli_real_escape_string($conn, $img['url']);
                 $pid_esc = !empty($img['public_id']) ? "'" . mysqli_real_escape_string($conn, $img['public_id']) . "'" : "NULL";
-                $is_primary = ($index === 0) ? 1 : 0;
-                mysqli_query($conn, "INSERT INTO buku_gambar (buku_id, url_gambar, public_id, is_primary, urutan) VALUES ('$buku_id', '$url_esc', $pid_esc, $is_primary, $index)");
+                $urutan = $index + 1;
+                mysqli_query($conn, "INSERT INTO buku_gambar (buku_id, url_gambar, public_id, is_primary, urutan) VALUES ('$buku_id', '$url_esc', $pid_esc, 0, $urutan)");
             }
 
-            $_SESSION['success'] = "Buku dan seluruh foto galeri berhasil ditambahkan.";
+            $_SESSION['success'] = "Buku, foto utama, dan seluruh foto galeri tambahan berhasil ditambahkan.";
             header("Location: index.php");
             exit;
         } else {

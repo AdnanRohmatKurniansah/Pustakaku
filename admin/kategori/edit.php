@@ -1,7 +1,10 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../services/cloudinary_service.php';
 
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         header("Location: ../../auth/login.php");
@@ -68,7 +71,13 @@
 
                         <div class="mb-4">
                             <label class="form-label small fw-semibold text-secondary d-block">Gambar Saat Ini</label>
-                            <img src="<?= (!empty($kategori['gambar']) && file_exists('../../assets/uploads/kategori/' . $kategori['gambar'])) ? ('../../assets/uploads/kategori/' . htmlspecialchars($kategori['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="Preview" class="rounded-3 border mb-2 object-fit-cover" style="width: 80px; height: 80px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
+                            <?php 
+                                $kat_img = resolveImageUrl($kategori['gambar'] ?? '', 'kategori'); 
+                                if (strpos($kat_img, 'assets/') === 0) { 
+                                    $kat_img = '../../' . $kat_img; 
+                                } 
+                            ?>
+                            <img src="<?= htmlspecialchars($kat_img); ?>" alt="Preview" class="rounded-3 border mb-2 object-fit-cover" style="width: 80px; height: 80px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
 
                             <input type="file" class="form-control" id="gambar" name="gambar" accept="image/*">
                             <div class="form-text small">Biarkan kosong jika tidak ingin mengubah gambar kategori.</div>

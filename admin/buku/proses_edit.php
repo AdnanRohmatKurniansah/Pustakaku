@@ -2,7 +2,9 @@
     require_once __DIR__ . '/../../config/database.php';
     require_once __DIR__ . '/../../services/cloudinary_service.php';
 
-    session_start();
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
 
     if (!isset($_SESSION['user_id']) || !isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
         header("Location: ../../auth/login.php");
@@ -16,16 +18,16 @@
         $gambar_id = isset($_GET['gambar_id']) ? intval($_GET['gambar_id']) : 0;
 
         if ($buku_id > 0 && $gambar_id > 0) {
-            mysqli_query($conn, "UPDATE buku_gambar SET is_primary = 0 WHERE buku_id = '$buku_id'");
-            mysqli_query($conn, "UPDATE buku_gambar SET is_primary = 1 WHERE id = '$gambar_id' AND buku_id = '$buku_id'");
-
-            $q_target = mysqli_query($conn, "SELECT url_gambar FROM buku_gambar WHERE id = '$gambar_id' LIMIT 1");
+            $q_target = mysqli_query($conn, "SELECT url_gambar FROM buku_gambar WHERE id = '$gambar_id' AND buku_id = '$buku_id' LIMIT 1");
             if ($q_target && mysqli_num_rows($q_target) > 0) {
                 $row_img = mysqli_fetch_assoc($q_target);
                 $new_url = mysqli_real_escape_string($conn, $row_img['url_gambar']);
-                mysqli_query($conn, "UPDATE buku SET gambar = '$new_url' WHERE id = '$buku_id'");
+
+                mysqli_query($conn, "UPDATE buku_gambar SET is_primary = 0 WHERE buku_id = '$buku_id'");
+                mysqli_query($conn, "UPDATE buku_gambar SET is_primary = 1 WHERE id = '$gambar_id' AND buku_id = '$buku_id'");
+                mysqli_query($conn, "UPDATE buku SET gambar = '$new_url', updated_at = NOW() WHERE id = '$buku_id'");
+                $_SESSION['success'] = "Foto utama berhasil diubah.";
             }
-            $_SESSION['success'] = "Foto utama berhasil diubah.";
         }
         header("Location: edit.php?id=" . $buku_id);
         exit;
@@ -40,7 +42,7 @@
             $total = mysqli_fetch_assoc($q_count)['total'] ?? 0;
 
             if ($total <= 1) {
-                $_SESSION['error'] = "Tidak dapat menghapus foto terakhir. Minimal produk memiliki satu foto.";
+                $_SESSION['error'] = "Tidak dapat menghapus foto terakhir. Minimal buku memiliki satu foto.";
                 header("Location: edit.php?id=" . $buku_id);
                 exit;
             }
@@ -58,16 +60,67 @@
                     $next_id = $next_img['id'];
                     $next_url = mysqli_real_escape_string($conn, $next_img['url_gambar']);
                     mysqli_query($conn, "UPDATE buku_gambar SET is_primary = 1 WHERE id = '$next_id'");
-                    mysqli_query($conn, "UPDATE buku SET gambar = '$next_url' WHERE id = '$buku_id'");
+                    mysqli_query($conn, "UPDATE buku SET gambar = '$next_url', updated_at = NOW() WHERE id = '$buku_id'");
                 }
             }
-            $_SESSION['success'] = "Foto galeri berhasil dihapus.";
+            $_SESSION['success'] = "Foto tambahan berhasil dihapus.";
         }
         header("Location: edit.php?id=" . $buku_id);
         exit;
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $aksi = $_GET['aksi'] ?? $_POST['aksi'] ?? 'update_buku';
+
+        if ($aksi === 'tambah_gambar_tambahan') {
+            $buku_id = isset($_POST['buku_id']) ? intval($_POST['buku_id']) : 0;
+            if ($buku_id <= 0) {
+                $_SESSION['error'] = "ID buku tidak valid.";
+                header("Location: index.php");
+                exit;
+            }
+
+            if (!isset($_FILES['gambar_tambahan']) || empty($_FILES['gambar_tambahan']['name']) || (is_array($_FILES['gambar_tambahan']['name']) && empty($_FILES['gambar_tambahan']['name'][0]))) {
+                $_SESSION['error'] = "Silakan pilih minimal 1 foto tambahan untuk diunggah.";
+                header("Location: edit.php?id=" . $buku_id);
+                exit;
+            }
+
+            $files = $_FILES['gambar_tambahan'];
+            $count = is_array($files['name']) ? count($files['name']) : 1;
+            $success_count = 0;
+
+            for ($i = 0; $i < $count; $i++) {
+                $tmp_name = is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'];
+                $name = is_array($files['name']) ? $files['name'][$i] : $files['name'];
+                $error = is_array($files['error']) ? $files['error'][$i] : $files['error'];
+
+                if ($error === UPLOAD_ERR_OK && is_uploaded_file($tmp_name)) {
+                    $single_file = [
+                        'tmp_name' => $tmp_name,
+                        'name' => $name,
+                        'error' => $error
+                    ];
+                    $upload_res = uploadFileCloudinary($single_file, 'buku');
+                    if ($upload_res['ok']) {
+                        $url_esc = mysqli_real_escape_string($conn, $upload_res['url']);
+                        $pid_esc = !empty($upload_res['public_id']) ? "'" . mysqli_real_escape_string($conn, $upload_res['public_id']) . "'" : "NULL";
+                        mysqli_query($conn, "INSERT INTO buku_gambar (buku_id, url_gambar, public_id, is_primary, urutan) VALUES ('$buku_id', '$url_esc', $pid_esc, 0, 99)");
+                        $success_count++;
+                    }
+                }
+            }
+
+            if ($success_count > 0) {
+                $_SESSION['success'] = "Berhasil menambahkan foto tambahan ke galeri.";
+            } else {
+                $_SESSION['error'] = "Gagal mengunggah foto tambahan.";
+            }
+
+            header("Location: edit.php?id=" . $buku_id);
+            exit;
+        }
+
         $id = isset($_POST['id']) ? intval($_POST['id']) : 0;
         $kategori_id = isset($_POST['kategori_id']) ? intval($_POST['kategori_id']) : 0;
         $judul = trim($_POST['judul'] ?? '');
@@ -94,28 +147,22 @@
             exit;
         }
 
-        if (isset($_FILES['gambar_baru'])) {
-            $files = $_FILES['gambar_baru'];
-            $count = is_array($files['name']) ? count($files['name']) : 1;
+        $buku_lama = mysqli_fetch_assoc($check_query);
+        $gambar_utama_url = $buku_lama['gambar'];
 
-            for ($i = 0; $i < $count; $i++) {
-                $tmp_name = is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'];
-                $name = is_array($files['name']) ? $files['name'][$i] : $files['name'];
-                $error = is_array($files['error']) ? $files['error'][$i] : $files['error'];
+        if (isset($_FILES['gambar_utama']) && $_FILES['gambar_utama']['error'] === UPLOAD_ERR_OK && is_uploaded_file($_FILES['gambar_utama']['tmp_name'])) {
+            $upload_res = uploadFileCloudinary($_FILES['gambar_utama'], 'buku');
+            if ($upload_res['ok']) {
+                $gambar_utama_url = $upload_res['url'];
+                $prim_esc = mysqli_real_escape_string($conn, $gambar_utama_url);
+                $pid_esc = !empty($upload_res['public_id']) ? "'" . mysqli_real_escape_string($conn, $upload_res['public_id']) . "'" : "NULL";
 
-                if ($error === UPLOAD_ERR_OK && is_uploaded_file($tmp_name)) {
-                    $single_file = [
-                        'tmp_name' => $tmp_name,
-                        'name' => $name,
-                        'error' => $error
-                    ];
-                    $upload_res = uploadFileCloudinary($single_file, 'buku');
-                    if ($upload_res['ok']) {
-                        $url_esc = mysqli_real_escape_string($conn, $upload_res['url']);
-                        $pid_esc = !empty($upload_res['public_id']) ? "'" . mysqli_real_escape_string($conn, $upload_res['public_id']) . "'" : "NULL";
-                        mysqli_query($conn, "INSERT INTO buku_gambar (buku_id, url_gambar, public_id, is_primary, urutan) VALUES ('$id', '$url_esc', $pid_esc, 0, 99)");
-                    }
-                }
+                mysqli_query($conn, "UPDATE buku_gambar SET is_primary = 0 WHERE buku_id = '$id'");
+                mysqli_query($conn, "INSERT INTO buku_gambar (buku_id, url_gambar, public_id, is_primary, urutan) VALUES ('$id', '$prim_esc', $pid_esc, 1, 0)");
+            } else {
+                $_SESSION['error'] = "Gagal mengunggah foto utama: " . ($upload_res['message'] ?? '');
+                header("Location: edit.php?id=" . $id);
+                exit;
             }
         }
 
@@ -124,18 +171,14 @@
         $penerbit = mysqli_real_escape_string($conn, $penerbit);
         $isbn = mysqli_real_escape_string($conn, $isbn);
         $deskripsi = mysqli_real_escape_string($conn, $deskripsi);
+        $gambar_utama_esc = mysqli_real_escape_string($conn, $gambar_utama_url);
 
-        $query_str = "UPDATE buku SET kategori_id = '$kategori_id', judul = '$judul', penulis = '$penulis', penerbit = '$penerbit', tahun_terbit = $tahun_terbit, isbn = '$isbn', harga = '$harga', harga_diskon = $harga_diskon, stok = '$stok', berat_gram = '$berat_gram', deskripsi = '$deskripsi', updated_at = NOW() WHERE id = '$id'";
+        $query_str = "UPDATE buku SET kategori_id = '$kategori_id', judul = '$judul', penulis = '$penulis', penerbit = '$penerbit', tahun_terbit = $tahun_terbit, isbn = '$isbn', harga = '$harga', harga_diskon = $harga_diskon, stok = '$stok', berat_gram = '$berat_gram', deskripsi = '$deskripsi', gambar = '$gambar_utama_esc', updated_at = NOW() WHERE id = '$id'";
         $update = mysqli_query($conn, $query_str);
 
         if ($update) {
-            $q_prim = mysqli_query($conn, "SELECT url_gambar FROM buku_gambar WHERE buku_id = '$id' AND is_primary = 1 LIMIT 1");
-            if ($q_prim && mysqli_num_rows($q_prim) > 0) {
-                $prim_url = mysqli_real_escape_string($conn, mysqli_fetch_assoc($q_prim)['url_gambar']);
-                mysqli_query($conn, "UPDATE buku SET gambar = '$prim_url' WHERE id = '$id'");
-            }
-            $_SESSION['success'] = "Data buku dan foto galeri berhasil diperbarui!";
-            header("Location: index.php");
+            $_SESSION['success'] = "Data buku dan foto utama berhasil diperbarui!";
+            header("Location: edit.php?id=" . $id);
             exit;
         } else {
             $_SESSION['error'] = "Gagal memperbarui data buku: " . mysqli_error($conn);
@@ -146,4 +189,3 @@
         header("Location: index.php");
         exit;
     }
-?>
