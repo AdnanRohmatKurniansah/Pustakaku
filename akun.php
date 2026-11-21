@@ -165,12 +165,7 @@
                                         <span class="stat-label">Pesanan</span>
                                     </a>
                                 </div>
-                                <div class="col-6">
-                                    <a href="akun.php?tab=pembayaran" class="account-stat">
-                                        <span class="stat-value"><?= formatRupiah($total_belanja); ?></span>
-                                        <span class="stat-label">Total Belanja</span>
-                                    </a>
-                                </div>
+                                
                                 <div class="col-6">
                                     <a href="akun.php?tab=alamat" class="account-stat">
                                         <span class="stat-value"><?= count($alamat_list); ?></span>
@@ -242,9 +237,7 @@
                         <li class="nav-item" role="presentation">
                             <button class="nav-link account-tab-link <?= ($active_tab === 'alamat') ? 'active' : ''; ?>" id="tab-alamat-btn" data-bs-toggle="pill" data-bs-target="#tab-alamat" type="button" role="tab" aria-controls="tab-alamat" aria-selected="<?= ($active_tab === 'alamat') ? 'true' : 'false'; ?>">Daftar Alamat</button>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link account-tab-link <?= ($active_tab === 'pembayaran') ? 'active' : ''; ?>" id="tab-pembayaran-btn" data-bs-toggle="pill" data-bs-target="#tab-pembayaran" type="button" role="tab" aria-controls="tab-pembayaran" aria-selected="<?= ($active_tab === 'pembayaran') ? 'true' : 'false'; ?>">Pembayaran</button>
-                        </li>
+                        
                         <li class="nav-item" role="presentation">
                             <button class="nav-link account-tab-link <?= ($active_tab === 'pesanan') ? 'active' : ''; ?>" id="tab-pesanan-btn" data-bs-toggle="pill" data-bs-target="#tab-pesanan" type="button" role="tab" aria-controls="tab-pesanan" aria-selected="<?= ($active_tab === 'pesanan') ? 'true' : 'false'; ?>">Riwayat Pesanan</button>
                         </li>
@@ -473,58 +466,6 @@
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <div class="tab-pane fade <?= ($active_tab === 'pembayaran') ? 'show active' : ''; ?>" id="tab-pembayaran" role="tabpanel" aria-labelledby="tab-pembayaran-btn" tabindex="0">
-                        <div class="account-pane-block">
-                            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 pb-3 border-bottom mb-4">
-                                <div>
-                                    <h5 class="fw-bold text-dark mb-1"><i class="bi bi-credit-card-2-front text-success me-2"></i>Riwayat Pembayaran</h5>
-                                    <p class="text-muted small mb-0">Catatan transaksi pembayaran yang tercatat pada akun Anda</p>
-                                </div>
-                                <span class="badge bg-success-subtle text-success rounded-pill px-3 py-1 fw-semibold"><?= formatRupiah($total_belanja); ?> Terbayar</span>
-                            </div>
-
-                            <?php if (empty($orders)): ?>
-                                <div class="text-center py-5 bg-light rounded-4 border">
-                                    <div class="rounded-circle bg-white text-muted d-inline-flex align-items-center justify-content-center mx-auto mb-3 shadow-sm" style="width: 60px; height: 60px;">
-                                        <i class="bi bi-credit-card" style="font-size: 1.8rem;"></i>
-                                    </div>
-                                    <h6 class="fw-bold text-dark mb-1">Belum Ada Pembayaran</h6>
-                                    <p class="text-muted small mb-3">Setiap pembayaran pesanan Anda akan muncul di halaman ini.</p>
-                                    <a href="katalog.php" class="btn btn-success btn-sm rounded-pill px-4 fw-semibold"><i class="bi bi-grid me-1"></i>Mulai Berbelanja</a>
-                                </div>
-                            <?php else: ?>
-                                <div class="d-flex flex-column gap-2">
-                                    <?php foreach ($orders as $pay): ?>
-                                        <?php
-                                            $lunas = in_array($pay['status_pesanan'], ['diproses', 'dikirim', 'selesai'], true);
-                                            $batal = ($pay['status_pesanan'] === 'dibatalkan');
-                                        ?>
-                                        <a href="pesanan_sukses.php?id=<?= (int) $pay['id']; ?>" class="payment-row text-decoration-none d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                            <div class="d-flex align-items-center gap-3">
-                                                <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 <?= $batal ? 'bg-danger-subtle text-danger' : ($lunas ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'); ?>" style="width: 42px; height: 42px;">
-                                                    <i class="bi <?= $batal ? 'bi-x-circle' : ($lunas ? 'bi-check2-circle' : 'bi-hourglass-split'); ?> fs-5"></i>
-                                                </div>
-                                                <div class="min-w-0">
-                                                    <div class="fw-semibold text-dark small font-monospace"><?= htmlspecialchars($pay['nomor_pesanan']); ?></div>
-                                                    <div class="text-muted" style="font-size: 11px;">
-                                                        <i class="bi bi-wallet2 me-1 text-success"></i><?= htmlspecialchars($pay['metode_pembayaran']); ?>
-                                                        &bull; <?= date('d M Y, H:i', strtotime($pay['created_at'])); ?> WIB
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="text-end">
-                                                <div class="payment-amount"><?= formatRupiah($pay['total_bayar']); ?></div>
-                                                <span class="badge <?= $batal ? 'bg-danger-subtle text-danger' : ($lunas ? 'bg-success-subtle text-success' : 'bg-warning-subtle text-warning'); ?> rounded-pill px-2 py-1" style="font-size: 10px;">
-                                                    <?= $batal ? 'Dibatalkan' : ($lunas ? 'Lunas' : 'Belum Dibayar'); ?>
-                                                </span>
-                                            </div>
-                                        </a>
-                                    <?php endforeach; ?>
-                                </div>
-                            <?php endif; ?>
                         </div>
                     </div>
 
