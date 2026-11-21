@@ -91,6 +91,7 @@
 
         if ($query) {
             $_SESSION['nama_lengkap'] = $nama_lengkap;
+            $_SESSION['foto_profil'] = $profile_nama;
             $_SESSION['success'] = "Profil anda berhasil diperbarui";
             header("Location: index.php");
             exit;
