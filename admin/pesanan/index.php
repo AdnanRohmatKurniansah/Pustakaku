@@ -1,5 +1,6 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../services/midtrans_service.php';
 
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
@@ -176,6 +177,11 @@
                                     </tr>
                                 <?php else: ?>
                                     <?php $no = $offset + 1; while ($row = mysqli_fetch_assoc($q_pesanan)): ?>
+                                        <?php 
+                                            if ($row['status_pesanan'] === 'menunggu_pembayaran') {
+                                                $row = midtrans_sinkronisasi_pesanan($conn, $row);
+                                            }
+                                        ?>
                                         <tr>
                                             <td class="text-center fw-semibold text-muted"><?= $no++; ?></td>
                                             <td>
