@@ -1,5 +1,6 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
+    require_once __DIR__ . '/../../services/midtrans_service.php';
 
     session_start();
 
@@ -22,6 +23,10 @@
         $_SESSION['error'] = 'Pesanan tidak ditemukan.';
         header("Location: index.php");
         exit;
+    }
+
+    if ($pesanan['status_pesanan'] === 'menunggu_pembayaran') {
+        $pesanan = midtrans_sinkronisasi_pesanan($conn, $pesanan);
     }
 
     $q_items = mysqli_query($conn, "SELECT dp.*, b.judul, b.penulis, b.penerbit, b.gambar FROM detail_pesanan dp LEFT JOIN buku b ON dp.buku_id = b.id WHERE dp.pesanan_id = '$pesanan_id'");

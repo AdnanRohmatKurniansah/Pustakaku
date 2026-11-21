@@ -6,6 +6,7 @@
     require_once __DIR__ . '/cart/proses_keranjang.php';
     require_once __DIR__ . '/services/cloudinary_service.php';
     require_once __DIR__ . '/services/rajaongkir_service.php';
+    require_once __DIR__ . '/services/midtrans_service.php';
 
     if (!isset($_SESSION['user_id'])) {
         $_SESSION['error'] = "Silakan masuk terlebih dahulu untuk mengakses akun Anda.";
@@ -47,6 +48,9 @@
     $orders = [];
     if ($q_my_orders) {
         while ($r_ord = mysqli_fetch_assoc($q_my_orders)) {
+            if ($r_ord['status_pesanan'] === 'menunggu_pembayaran') {
+                $r_ord = midtrans_sinkronisasi_pesanan($conn, $r_ord);
+            }
             $orders[] = $r_ord;
         }
     }
@@ -374,6 +378,7 @@
                                         <div class="border rounded-4 p-3 <?= ($al['is_primary'] == 1) ? 'border-success bg-success-subtle bg-opacity-10' : 'bg-white'; ?>">
                                             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                                                 <div class="d-flex align-items-center gap-2">
+                                                    <span class="badge bg-light text-dark border rounded-pill px-2 py-1 small"><?= htmlspecialchars($al['label_alamat']); ?></span>
                                                     <?php if ($al['is_primary'] == 1): ?>
                                                         <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-2 py-1 small"><i class="bi bi-check-circle-fill me-1"></i>Alamat Utama</span>
                                                     <?php endif; ?>
@@ -384,6 +389,22 @@
                                                             Jadikan Utama
                                                         </a>
                                                     <?php endif; ?>
+                                                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 small btn-edit-alamat"
+                                                        data-id="<?= (int)$al['id']; ?>"
+                                                        data-label="<?= htmlspecialchars($al['label_alamat']); ?>"
+                                                        data-nama="<?= htmlspecialchars($al['nama_penerima']); ?>"
+                                                        data-telepon="<?= htmlspecialchars($al['no_telepon']); ?>"
+                                                        data-provinsi-id="<?= (int)$al['provinsi_id']; ?>"
+                                                        data-provinsi-nama="<?= htmlspecialchars($al['provinsi_nama']); ?>"
+                                                        data-kota-id="<?= (int)$al['kota_id']; ?>"
+                                                        data-kota-nama="<?= htmlspecialchars($al['kota_nama']); ?>"
+                                                        data-kecamatan="<?= htmlspecialchars($al['kecamatan'] ?? ''); ?>"
+                                                        data-kode-pos="<?= htmlspecialchars($al['kode_pos'] ?? ''); ?>"
+                                                        data-alamat="<?= htmlspecialchars($al['alamat_lengkap']); ?>"
+                                                        data-is-primary="<?= (int)$al['is_primary']; ?>"
+                                                        data-bs-toggle="modal" data-bs-target="#modalEditAlamat">
+                                                        <i class="bi bi-pencil-square me-1"></i>Ubah
+                                                    </button>
                                                     <a href="proses_alamat.php?aksi=hapus&id=<?= (int)$al['id']; ?>&redirect=akun.php%3Ftab%3Dalamat" class="btn btn-sm btn-outline-danger rounded-pill px-3 py-1 small" onclick="return confirm('Apakah Anda yakin ingin menghapus alamat ini?');">
                                                         <i class="bi bi-trash"></i>
                                                     </a>
@@ -678,6 +699,86 @@
         </div>
     </div>
 
+    <div class="modal fade" id="modalEditAlamat" tabindex="-1" aria-labelledby="modalEditAlamatLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-dark" id="modalEditAlamatLabel"><i class="bi bi-pencil-square text-success me-2"></i>Ubah Alamat Pengiriman</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="proses_alamat.php" method="POST">
+                    <input type="hidden" name="aksi" value="edit">
+                    <input type="hidden" name="id" id="edit_alamat_id" value="">
+                    <input type="hidden" name="redirect" value="akun.php?tab=alamat">
+                    <input type="hidden" name="provinsi_nama" id="edit_provinsi_nama" value="">
+                    <input type="hidden" name="kota_nama" id="edit_kota_nama" value="">
+
+                    <div class="modal-body p-4">
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-semibold text-secondary">Label Alamat <span class="text-danger">*</span></label>
+                                <input type="text" name="label_alamat" id="edit_label_alamat" class="form-control rounded-3" placeholder="Contoh: Rumah, Kantor, Kos" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-semibold text-secondary">Nama Penerima <span class="text-danger">*</span></label>
+                                <input type="text" name="nama_penerima" id="edit_nama_penerima" class="form-control rounded-3" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-semibold text-secondary">Nomor Telepon <span class="text-danger">*</span></label>
+                                <input type="tel" name="no_telepon" id="edit_no_telepon" class="form-control rounded-3" required placeholder="08xxxxxxxxxx">
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Provinsi <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-3" name="provinsi_id" id="edit_provinsi_id" required>
+                                    <option value="">-- Pilih Provinsi --</option>
+                                    <?php foreach ($provinces as $prov): ?>
+                                        <option value="<?= (int)$prov['province_id']; ?>" data-name="<?= htmlspecialchars($prov['province']); ?>"><?= htmlspecialchars($prov['province']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Kota / Kabupaten <span class="text-danger">*</span></label>
+                                <select class="form-select rounded-3" name="kota_id" id="edit_kota_id" required>
+                                    <option value="">-- Pilih Provinsi Terlebih Dahulu --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Kecamatan</label>
+                                <input type="text" name="kecamatan" id="edit_kecamatan" class="form-control rounded-3" placeholder="Contoh: Sukolilo / Menteng">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label small fw-semibold text-secondary">Kode Pos</label>
+                                <input type="text" name="kode_pos" id="edit_kode_pos" class="form-control rounded-3" placeholder="Contoh: 60111">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold text-secondary">Alamat Lengkap <span class="text-danger">*</span></label>
+                            <textarea name="alamat_lengkap" id="edit_alamat_lengkap" class="form-control rounded-3" rows="3" placeholder="Nama jalan, nomor rumah, RT/RW, dan patokan lokasi" required></textarea>
+                        </div>
+
+                        <div class="form-check" id="wrap_edit_is_primary">
+                            <input class="form-check-input" type="checkbox" name="is_primary" value="1" id="edit_is_primary">
+                            <label class="form-check-label small text-muted" for="edit_is_primary">
+                                Jadikan sebagai alamat utama pengiriman
+                            </label>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-top bg-light">
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">Batal</button>
+                        <button type="submit" class="btn btn-success rounded-pill px-4 fw-semibold"><i class="bi bi-save me-1"></i>Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <?php include(__DIR__ . '/layouts/footer.php'); ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -733,6 +834,109 @@
                         const pos = selectedOpt.getAttribute('data-postal');
                         if (pos && inputKodePos && !inputKodePos.value) {
                             inputKodePos.value = pos;
+                        }
+                    }
+                });
+            }
+
+            const editButtons = document.querySelectorAll('.btn-edit-alamat');
+            const editId = document.getElementById('edit_alamat_id');
+            const editLabel = document.getElementById('edit_label_alamat');
+            const editNama = document.getElementById('edit_nama_penerima');
+            const editTelp = document.getElementById('edit_no_telepon');
+            const editProv = document.getElementById('edit_provinsi_id');
+            const editKota = document.getElementById('edit_kota_id');
+            const editProvNama = document.getElementById('edit_provinsi_nama');
+            const editKotaNama = document.getElementById('edit_kota_nama');
+            const editKec = document.getElementById('edit_kecamatan');
+            const editPos = document.getElementById('edit_kode_pos');
+            const editAlamat = document.getElementById('edit_alamat_lengkap');
+            const editPrimary = document.getElementById('edit_is_primary');
+
+            function loadEditKota(provId, targetKotaId) {
+                if (!editKota) return;
+                editKota.innerHTML = '<option value="">Memuat kota...</option>';
+                editKota.disabled = true;
+
+                if (!provId) {
+                    editKota.innerHTML = '<option value="">-- Pilih Provinsi Terlebih Dahulu --</option>';
+                    return;
+                }
+
+                fetch('api/rajaongkir.php?action=cities&province_id=' + encodeURIComponent(provId))
+                    .then(res => res.json())
+                    .then(res => {
+                        if (res.ok && Array.isArray(res.data)) {
+                            editKota.innerHTML = '<option value="">-- Pilih Kota / Kabupaten --</option>';
+                            res.data.forEach(item => {
+                                const opt = document.createElement('option');
+                                opt.value = item.city_id;
+                                opt.setAttribute('data-name', item.type + ' ' + item.city_name);
+                                opt.setAttribute('data-postal', item.postal_code || '');
+                                opt.textContent = item.type + ' ' + item.city_name;
+                                if (targetKotaId && String(item.city_id) === String(targetKotaId)) {
+                                    opt.selected = true;
+                                    if (editKotaNama) {
+                                        editKotaNama.value = item.type + ' ' + item.city_name;
+                                    }
+                                }
+                                editKota.appendChild(opt);
+                            });
+                            editKota.disabled = false;
+                        } else {
+                            editKota.innerHTML = '<option value="">Gagal memuat kota</option>';
+                        }
+                    })
+                    .catch(() => {
+                        editKota.innerHTML = '<option value="">Gagal memuat kota</option>';
+                    });
+            }
+
+            if (editButtons.length > 0) {
+                editButtons.forEach(btn => {
+                    btn.addEventListener('click', function () {
+                        const d = this.dataset;
+                        if (editId) editId.value = d.id || '';
+                        if (editLabel) editLabel.value = d.label || '';
+                        if (editNama) editNama.value = d.nama || '';
+                        if (editTelp) editTelp.value = d.telepon || '';
+                        if (editProvNama) editProvNama.value = d.provinsiNama || '';
+                        if (editKotaNama) editKotaNama.value = d.kotaNama || '';
+                        if (editKec) editKec.value = d.kecamatan || '';
+                        if (editPos) editPos.value = d.kodePos || '';
+                        if (editAlamat) editAlamat.value = d.alamat || '';
+                        if (editPrimary) {
+                            editPrimary.checked = (d.isPrimary === '1');
+                            editPrimary.disabled = (d.isPrimary === '1');
+                        }
+
+                        if (editProv) {
+                            editProv.value = d.provinsiId || '';
+                            loadEditKota(d.provinsiId, d.kotaId);
+                        }
+                    });
+                });
+            }
+
+            if (editProv && editKota) {
+                editProv.addEventListener('change', function () {
+                    const provId = this.value;
+                    const selectedOpt = this.options[this.selectedIndex];
+                    if (editProvNama) {
+                        editProvNama.value = selectedOpt ? selectedOpt.getAttribute('data-name') : '';
+                    }
+                    loadEditKota(provId, null);
+                });
+
+                editKota.addEventListener('change', function () {
+                    const selectedOpt = this.options[this.selectedIndex];
+                    if (selectedOpt) {
+                        if (editKotaNama) {
+                            editKotaNama.value = selectedOpt.getAttribute('data-name') || '';
+                        }
+                        const pos = selectedOpt.getAttribute('data-postal');
+                        if (pos && editPos && !editPos.value) {
+                            editPos.value = pos;
                         }
                     }
                 });

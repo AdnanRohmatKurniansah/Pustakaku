@@ -369,9 +369,14 @@
                         </div>
                     </div>
                     <div class="modal-footer border-top bg-light justify-content-between">
-                        <button type="button" class="btn btn-outline-success rounded-pill btn-sm px-3 fw-semibold" id="btnBukaModalTambahAlamat">
-                            <i class="bi bi-plus-lg me-1"></i>Tambah Alamat Baru
-                        </button>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-success rounded-pill btn-sm px-3 fw-semibold" id="btnBukaModalTambahAlamat">
+                                <i class="bi bi-plus-lg me-1"></i>Tambah Alamat Baru
+                            </button>
+                            <a href="akun.php?tab=alamat" class="btn btn-outline-secondary rounded-pill btn-sm px-3 fw-semibold">
+                                <i class="bi bi-pencil-square me-1"></i>Kelola Alamat
+                            </a>
+                        </div>
                         <button type="button" class="btn btn-success rounded-pill btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Gunakan Alamat Ini</button>
                     </div>
                 </div>

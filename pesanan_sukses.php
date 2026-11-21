@@ -67,47 +67,7 @@
             }
         }
     } elseif ($pesanan['status_pesanan'] === 'menunggu_pembayaran') {
-        $created_time = strtotime($pesanan['created_at']);
-        $diff_seconds = time() - $created_time;
-        if ($diff_seconds > 86400) {
-            mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'dibatalkan', updated_at = NOW() WHERE id = '$pesanan_id'");
-            $pesanan['status_pesanan'] = 'dibatalkan';
-            $q_rest = mysqli_query($conn, "SELECT buku_id, jumlah FROM detail_pesanan WHERE pesanan_id = '$pesanan_id'");
-            if ($q_rest) {
-                while ($r_rest = mysqli_fetch_assoc($q_rest)) {
-                    $b_id = (int) $r_rest['buku_id'];
-                    $b_qty = (int) $r_rest['jumlah'];
-                    mysqli_query($conn, "UPDATE buku SET stok = stok + $b_qty, updated_at = NOW() WHERE id = '$b_id'");
-                }
-            }
-        } else {
-            $api_data = midtrans_get_transaction_data($pesanan['nomor_pesanan']);
-            if ($api_data && is_array($api_data)) {
-                $api_status = strtolower($api_data['transaction_status'] ?? '');
-                $api_metode = format_nama_metode_pembayaran($api_data['payment_type'] ?? '', $api_data['bank'] ?? '', $api_data['va_numbers'] ?? []);
-                $api_metode_esc = mysqli_real_escape_string($conn, $api_metode);
-
-                if (in_array($api_status, ['settlement', 'capture', 'success'], true)) {
-                    mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'diproses', metode_pembayaran = '$api_metode_esc', updated_at = NOW() WHERE id = '$pesanan_id'");
-                    $pesanan['status_pesanan'] = 'diproses';
-                    $pesanan['metode_pembayaran'] = $api_metode;
-                } elseif (in_array($api_status, ['expire', 'cancel', 'deny'], true)) {
-                    mysqli_query($conn, "UPDATE pesanan SET status_pesanan = 'dibatalkan', updated_at = NOW() WHERE id = '$pesanan_id'");
-                    $pesanan['status_pesanan'] = 'dibatalkan';
-                    $q_rest = mysqli_query($conn, "SELECT buku_id, jumlah FROM detail_pesanan WHERE pesanan_id = '$pesanan_id'");
-                    if ($q_rest) {
-                        while ($r_rest = mysqli_fetch_assoc($q_rest)) {
-                            $b_id = (int) $r_rest['buku_id'];
-                            $b_qty = (int) $r_rest['jumlah'];
-                            mysqli_query($conn, "UPDATE buku SET stok = stok + $b_qty, updated_at = NOW() WHERE id = '$b_id'");
-                        }
-                    }
-                } elseif (!empty($api_data['payment_type'])) {
-                    mysqli_query($conn, "UPDATE pesanan SET metode_pembayaran = '$api_metode_esc', updated_at = NOW() WHERE id = '$pesanan_id'");
-                    $pesanan['metode_pembayaran'] = $api_metode;
-                }
-            }
-        }
+        $pesanan = midtrans_sinkronisasi_pesanan($conn, $pesanan);
     }
 
     $q_items = mysqli_query($conn, "SELECT dp.*, b.judul, b.penulis, b.gambar FROM detail_pesanan dp JOIN buku b ON dp.buku_id = b.id WHERE dp.pesanan_id = '$pesanan_id'");

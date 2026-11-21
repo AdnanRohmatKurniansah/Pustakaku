@@ -93,6 +93,70 @@
         exit();
     }
 
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && $aksi === 'edit') {
+        $alamat_id = (int)($_POST['id'] ?? 0);
+        $label = mysqli_real_escape_string($conn, trim($_POST['label_alamat'] ?? 'Alamat'));
+        $nama = mysqli_real_escape_string($conn, trim($_POST['nama_penerima'] ?? ''));
+        $telepon = mysqli_real_escape_string($conn, trim($_POST['no_telepon'] ?? ''));
+        $provinsi_id = (int)($_POST['provinsi_id'] ?? 0);
+        $provinsi_nama = mysqli_real_escape_string($conn, trim($_POST['provinsi_nama'] ?? ''));
+        $kota_id = (int)($_POST['kota_id'] ?? 0);
+        $kota_nama = mysqli_real_escape_string($conn, trim($_POST['kota_nama'] ?? ''));
+        $kecamatan = mysqli_real_escape_string($conn, trim($_POST['kecamatan'] ?? ''));
+        $kode_pos = mysqli_real_escape_string($conn, trim($_POST['kode_pos'] ?? ''));
+        $alamat = mysqli_real_escape_string($conn, trim($_POST['alamat_lengkap'] ?? ''));
+        $is_primary = isset($_POST['is_primary']) ? 1 : 0;
+
+        if ($alamat_id <= 0 || empty($nama) || empty($telepon) || empty($alamat) || $kota_id <= 0) {
+            $_SESSION['error'] = "Mohon lengkapi semua data wajib pada formulir alamat.";
+            header("Location: akun.php?tab=alamat");
+            exit();
+        }
+
+        $q_own = mysqli_query($conn, "SELECT id, is_primary FROM user_alamat WHERE id = '$alamat_id' AND user_id = '$user_id' LIMIT 1");
+        if (!$q_own || mysqli_num_rows($q_own) === 0) {
+            $_SESSION['error'] = "Alamat tidak ditemukan.";
+            header("Location: akun.php?tab=alamat");
+            exit();
+        }
+        $curr_al = mysqli_fetch_assoc($q_own);
+        if ((int)$curr_al['is_primary'] === 1) {
+            $is_primary = 1;
+        }
+
+        if ($is_primary == 1) {
+            mysqli_query($conn, "UPDATE user_alamat SET is_primary = 0 WHERE user_id = '$user_id'");
+        }
+
+        $q_update = "UPDATE user_alamat SET 
+                        label_alamat = '$label',
+                        nama_penerima = '$nama',
+                        no_telepon = '$telepon',
+                        provinsi_id = '$provinsi_id',
+                        provinsi_nama = '$provinsi_nama',
+                        kota_id = '$kota_id',
+                        kota_nama = '$kota_nama',
+                        kecamatan = '$kecamatan',
+                        kode_pos = '$kode_pos',
+                        alamat_lengkap = '$alamat',
+                        is_primary = '$is_primary',
+                        updated_at = NOW()
+                     WHERE id = '$alamat_id' AND user_id = '$user_id'";
+
+        if (mysqli_query($conn, $q_update)) {
+            if ($is_primary == 1) {
+                mysqli_query($conn, "UPDATE users SET no_telepon = COALESCE(no_telepon, '$telepon') WHERE id = '$user_id'");
+            }
+            $_SESSION['success'] = "Alamat berhasil diperbarui.";
+        } else {
+            $_SESSION['error'] = "Gagal memperbarui alamat: " . mysqli_error($conn);
+        }
+
+        $redirect = $_POST['redirect'] ?? 'akun.php?tab=alamat';
+        header("Location: " . $redirect);
+        exit();
+    }
+
     header("Location: akun.php");
     exit();
 ?>
