@@ -125,8 +125,8 @@
     <main class="container my-3 my-md-4">
         <ol class="breadcrumb small mb-3">
                     <li class="breadcrumb-item active"><a href="index.php" class="text-success text-decoration-none">Beranda</a></li>
-                    <li class="breadcrumb-item"><a href="keranjang.php" class="text-success text-decoration-none">Keranjang Belanja</a></li>
-                    <li class="breadcrumb-item active" aria-current="page">Keranjang Belanja</li>
+                    <li class="breadcrumb-item"><a href="keranjang.php" class="text-success text-decoration-none">Keranjang Belanja</a></li>     
+                    <li class="breadcrumb-item active" aria-current="page">Checkout</li>
         </ol>
 
         <?php if (!empty($_SESSION['error'])): ?>
