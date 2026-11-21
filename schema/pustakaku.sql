@@ -409,8 +409,8 @@ CREATE TABLE `users` (
 --
 
 LOCK TABLES `users` WRITE;
-/*!40000 ALTER TABLE `users` DISABLE KEYS */;
-INSERT INTO `users` VALUES (1,'Administrator PustakaKu','admin@pustakaku.com',NULL,'0192023a7bbd73250516f069df18b500','admin','089898981','Nambangan','https://res.cloudinary.com/cxkyw5om/image/upload/v1794988917/pustakaku/user/zzzs8kzuhanem7wmc7co.jpg',NULL,NULL,'2026-10-27 23:40:50','2026-11-18 08:01:57'),(3,'asdad','atnandimas@gmail.com',NULL,'$2y$10$47ZZJvLKz1nFCu/qOR23Keg3jenCm2aqzz.8p7fok/Lawiow51js.','pelanggan','081298765432','Jl. Sudirman No. 45, RT 02 / RW 05, Menteng, Jakarta Pusat 10310',NULL,NULL,NULL,'2026-11-10 11:08:50','2026-11-15 00:19:53');
+/*!40000 ALTER TABLE `users` DISABLE KEYS admin123 password123 */;
+INSERT INTO `users` VALUES (1,'Administrator PustakaKu','admin@pustakaku.com',NULL,'0192023a7bbd73250516f069df18b500','admin','089898981','Nambangan','https://res.cloudinary.com/cxkyw5om/image/upload/v1794988917/pustakaku/user/zzzs8kzuhanem7wmc7co.jpg',NULL,NULL,'2026-10-27 23:40:50','2026-11-18 08:01:57'),(3,'Pembeli 1','pembeli1@gmail.com',NULL,'$2y$10$47ZZJvLKz1nFCu/qOR23Keg3jenCm2aqzz.8p7fok/Lawiow51js.','pelanggan','081298765432','Jl. Sudirman No. 45, RT 02 / RW 05, Menteng, Jakarta Pusat 10310',NULL,NULL,NULL,'2026-11-10 11:08:50','2026-11-15 00:19:53');
 /*!40000 ALTER TABLE `users` ENABLE KEYS */;
 UNLOCK TABLES;
 SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;

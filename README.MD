@@ -159,13 +159,3 @@ GOOGLE_REDIRECT_URI=http://localhost/projek_web/auth/google_callback.php
    ```text
    http://localhost/projek_web/
    ```
-
----
-
-## 🔑 Kredensial Akun Uji Coba
-
-| Peran (Role) | Email | Password | Hak Akses |
-|:---|:---|:---|:---|
-| **Administrator** | `admin@pustakaku.com` | `admin123` | Akses penuh dashboard `/admin`, inventaris buku, restok, pesanan masuk, dan laporan penjualan. |
-| **Pelanggan 1** | `budi@gmail.com` | `password123` | Akun pelanggan aktif dengan data alamat lengkap dan riwayat pesanan. |
-| **Pelanggan 2** | `atnandimas@gmail.com` | `password123` | Akun pelanggan aktif untuk pengujian checkout & transaksi. |
