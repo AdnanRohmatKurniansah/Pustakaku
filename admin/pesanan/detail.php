@@ -1,6 +1,7 @@
 <?php
     require_once __DIR__ . '/../../config/database.php';
     require_once __DIR__ . '/../../services/midtrans_service.php';
+    require_once __DIR__ . '/../../services/cloudinary_service.php';
 
     session_start();
 
@@ -29,7 +30,7 @@
         $pesanan = midtrans_sinkronisasi_pesanan($conn, $pesanan);
     }
 
-    $q_items = mysqli_query($conn, "SELECT dp.*, b.judul, b.penulis, b.penerbit, b.gambar FROM detail_pesanan dp LEFT JOIN buku b ON dp.buku_id = b.id WHERE dp.pesanan_id = '$pesanan_id'");
+    $q_items = mysqli_query($conn, "SELECT dp.*, b.judul, b.penulis, b.penerbit, COALESCE(NULLIF(b.gambar, ''), (SELECT bg.url_gambar FROM buku_gambar bg WHERE bg.buku_id = b.id ORDER BY bg.is_primary DESC, bg.id ASC LIMIT 1)) AS gambar FROM detail_pesanan dp LEFT JOIN buku b ON dp.buku_id = b.id WHERE dp.pesanan_id = '$pesanan_id'");
     $items = [];
     while ($row = mysqli_fetch_assoc($q_items)) {
         $items[] = $row;
@@ -84,10 +85,16 @@
                                     </thead>
                                     <tbody>
                                         <?php foreach ($items as $it): ?>
+                                            <?php
+                                                $it_img = resolveImageUrl($it['gambar'] ?? '', 'buku');
+                                                if (strpos($it_img, 'assets/') === 0) {
+                                                    $it_img = '../../' . $it_img;
+                                                }
+                                            ?>
                                             <tr>
                                                 <td>
                                                     <div class="d-flex align-items-center gap-3">
-                                                        <img src="<?= (!empty($it['gambar']) && file_exists(__DIR__ . '/../../assets/uploads/buku/' . $it['gambar'])) ? ('../../assets/uploads/buku/' . htmlspecialchars($it['gambar'])) : '../../assets/images/placeholder.png'; ?>" alt="<?= htmlspecialchars($it['judul'] ?? 'Buku'); ?>" class="rounded-2 border object-fit-cover" style="width: 48px; height: 64px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
+                                                        <img src="<?= htmlspecialchars($it_img); ?>" alt="<?= htmlspecialchars($it['judul'] ?? 'Buku'); ?>" class="rounded-2 border object-fit-cover" style="width: 48px; height: 64px;" onerror="this.onerror=null;this.src='../../assets/images/placeholder.png';">
                                                         <div>
                                                             <div class="fw-semibold text-dark"><?= htmlspecialchars($it['judul'] ?? 'Buku Dihapus'); ?></div>
                                                             <div class="text-muted small"><?= htmlspecialchars($it['penulis'] ?? '-'); ?><?php if (!empty($it['penerbit'])): ?> &bull; <?= htmlspecialchars($it['penerbit']); ?><?php endif; ?></div>
